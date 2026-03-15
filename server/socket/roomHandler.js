@@ -88,7 +88,7 @@ module.exports = (io, socket) => {
   socket.on('start_game', ({ roomId, gameName }) => {
     const room = rooms[roomId];
     if (room && room.host === socket.id) {
-      room.state = { status: 'playing', game: gameName, gameData: null };
+      room.state = { ...room.state, status: 'playing', game: gameName, gameData: null };
       io.to(roomId).emit('game_started', { game: gameName, state: room.state });
       io.to(roomId).emit('room_updated', room); // Always keep full state synced just in case
     }

@@ -12,6 +12,14 @@ function Unanimous({ socket, room, isHost, playerName, roomId }) {
   const [mySubmission, setMySubmission] = useState(false);
 
   const gameData = room.state.gameData || { question: '', answers: {}, phase: 'waiting' };
+
+  // Reset local state if server starts a new round (question changes or answers clear)
+  useEffect(() => {
+    if (!gameData.answers[socket.id]) {
+      setMySubmission(false);
+      setAnswer('');
+    }
+  }, [gameData.question, gameData.answers, socket.id]);
   
   const setupGame = () => {
     const randomQuestion = QUESTIONS[Math.floor(Math.random() * QUESTIONS.length)];
