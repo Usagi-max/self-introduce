@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { QRCodeCanvas } from 'qrcode.react';
 import Roulette from './Games/Roulette';
 import Unanimous from './Games/Unanimous';
@@ -11,14 +11,17 @@ import RouletteSetup from './Games/RouletteSetup';
 function Room({ socket, room, isHost, playerName }) {
   const { roomId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [copiedLink, setCopiedLink] = useState(false);
+  const [mustSetup, setMustSetup] = useState(location.state?.isNew || false);
 
   // If page refershed and context lost, return home
   useEffect(() => {
     if (!socket || !room) {
-      navigate('/');
+      if (roomId) navigate(`/?join=${roomId}`);
+      else navigate('/');
     }
-  }, [socket, room, navigate]);
+  }, [socket, room, navigate, roomId]);
 
   if (!socket || !room) return null;
 
@@ -40,6 +43,18 @@ function Room({ socket, room, isHost, playerName }) {
 
   // Lobby state
   if (room.state.status === 'lobby') {
+    if (mustSetup && isHost) {
+      return (
+        <div className="container animate-slide-up">
+          <div className="card" style={{ marginBottom: '1.5rem', textAlign: 'center' }}>
+            <h2 style={{ color: 'var(--primary)', marginBottom: '1rem' }}>🎉 ルーム作成成功！</h2>
+            <p style={{ color: 'var(--dark)' }}>まずは、このルームで遊ぶ「お題」を決めましょう。</p>
+          </div>
+          <RouletteSetup socket={socket} room={room} roomId={roomId} forceOpen={true} onSaved={() => setMustSetup(false)} />
+        </div>
+      );
+    }
+
     return (
       <div className="container animate-slide-up">
         

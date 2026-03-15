@@ -1,10 +1,28 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
-function Home({ onCreate, onJoin }) {
+function Home({ onCreate, onJoin, isLoading }) {
   const [name, setName] = useState('');
   const [roomId, setRoomId] = useState('');
   const [mode, setMode] = useState('choose'); // 'choose', 'create', 'join'
+  const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    const joinParam = searchParams.get('join');
+    if (joinParam) {
+      setMode('join');
+      setRoomId(joinParam);
+    }
+  }, [searchParams]);
+
+  if (isLoading) {
+    return (
+      <div className="container center-content animate-pop">
+        <h2 style={{ marginBottom: '1rem', color: 'var(--primary)' }}>通信中...</h2>
+        <div className="loader"></div>
+      </div>
+    );
+  }
 
   if (mode === 'choose') {
     return (

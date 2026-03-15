@@ -10,9 +10,9 @@ const COMMON_TOPICS = [
   '長所と短所', '座右の銘', '好きな映画', 'もし100万円あったら', 'ストレス発散法', '今まで一番痛かったこと', '無人島に一つだけ持っていくなら', 'タイムトラベルできるならいつ？', 'ここだけの話'
 ];
 
-export default function RouletteSetup({ socket, room, roomId }) {
+export default function RouletteSetup({ socket, room, roomId, forceOpen, onSaved }) {
   const currentTopics = room.state.rouletteTopics || [];
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(forceOpen || false);
   const [tempTopics, setTempTopics] = useState(currentTopics);
   const [newTopicInput, setNewTopicInput] = useState('');
 
@@ -48,9 +48,10 @@ export default function RouletteSetup({ socket, room, roomId }) {
       payload: { rouletteTopics: tempTopics }
     });
     setIsOpen(false);
+    if (onSaved) onSaved();
   };
 
-  if (!isOpen) {
+  if (!isOpen && !forceOpen) {
     return (
       <div style={{ marginBottom: '1.5rem', backgroundColor: 'var(--light)', padding: '1rem', borderRadius: 'var(--radius-md)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -131,7 +132,9 @@ export default function RouletteSetup({ socket, room, roomId }) {
 
       <div style={{ display: 'flex', gap: '0.5rem' }}>
         <button className="btn btn-primary" style={{ padding: '0.5rem', fontSize: '0.875rem' }} onClick={saveSettings}>保存</button>
-        <button className="btn btn-secondary" style={{ padding: '0.5rem', fontSize: '0.875rem' }} onClick={() => setIsOpen(false)}>キャンセル</button>
+        {!forceOpen && (
+          <button className="btn btn-secondary" style={{ padding: '0.5rem', fontSize: '0.875rem' }} onClick={() => setIsOpen(false)}>キャンセル</button>
+        )}
       </div>
     </div>
   );

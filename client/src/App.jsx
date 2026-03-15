@@ -14,6 +14,7 @@ function App() {
   const [room, setRoom] = useState(null);
   const [playerName, setPlayerName] = useState('');
   const [isHost, setIsHost] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -41,12 +42,14 @@ function App() {
   }, []);
 
   const handleCreateRoom = (name) => {
+    setIsLoading(true);
     setPlayerName(name);
     socket.emit('create_room', { playerName: name }, (response) => {
+      setIsLoading(false);
       if (response.success) {
         setRoom(response.room);
         setIsHost(true);
-        navigate(`/room/${response.roomId}`);
+        navigate(`/room/${response.roomId}`, { state: { isNew: true } });
       } else {
         alert('Failed to create room');
       }
@@ -54,8 +57,10 @@ function App() {
   };
 
   const handleJoinRoom = (roomId, name) => {
+    setIsLoading(true);
     setPlayerName(name);
     socket.emit('join_room', { roomId, playerName: name }, (response) => {
+      setIsLoading(false);
       if (response.success) {
         setRoom(response.room);
         setIsHost(false);
@@ -78,6 +83,7 @@ function App() {
             <Home 
               onCreate={handleCreateRoom} 
               onJoin={handleJoinRoom}
+              isLoading={isLoading}
             />
           } 
         />
