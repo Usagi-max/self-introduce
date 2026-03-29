@@ -3,7 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { QRCodeCanvas } from 'qrcode.react';
 import Roulette from './Games/Roulette';
 import Unanimous from './Games/Unanimous';
-import AIGuessAge from './Games/AIGuessAge';
+import AICompatibility from './Games/AICompatibility';
 import AIFaceAnalysis from './Games/AIFaceAnalysis';
 import Penalty from './Penalty/Penalty';
 import RouletteSetup from './Games/RouletteSetup';
@@ -41,6 +41,14 @@ function Room({ socket, room, isHost, playerName }) {
     socket.emit('update_game_state', { roomId, payload: { status: 'lobby', game: null } });
   };
 
+  const handleLeaveRoom = () => {
+    if (window.confirm('ルームから退出しますか？')) {
+      socket.emit('leave_room', { roomId });
+      sessionStorage.removeItem('savedRoomId');
+      navigate('/');
+    }
+  };
+
   // Lobby state
   if (room.state.status === 'lobby') {
     if (mustSetup && isHost) {
@@ -60,7 +68,16 @@ function Room({ socket, room, isHost, playerName }) {
         
         {/* QR Code and Room Sharing Card */}
         <div className="card" style={{ marginBottom: '1.5rem', textAlign: 'center' }}>
-          <h2 style={{ fontSize: '1.25rem', color: 'var(--gray-medium)', marginBottom: '1rem' }}>ルームの共有</h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <h2 style={{ fontSize: '1.25rem', color: 'var(--gray-medium)', margin: 0 }}>ルームの共有</h2>
+            <button 
+              className="btn btn-secondary" 
+              style={{ width: 'auto', padding: '0.25rem 0.75rem', fontSize: '0.875rem', backgroundColor: 'transparent', color: 'var(--gray-medium)', border: '1px solid var(--gray-light)' }} 
+              onClick={handleLeaveRoom}
+            >
+              退出する
+            </button>
+          </div>
           
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.5rem' }}>
             <div style={{ padding: '0.5rem', backgroundColor: 'white', border: '1px solid var(--gray-light)', borderRadius: '8px' }}>
@@ -97,30 +114,65 @@ function Room({ socket, room, isHost, playerName }) {
           <ul style={{ listStyle: 'none', padding: 0, marginTop: '1rem' }}>
             {room.players.map(p => (
               <li 
-                key={p.id}
+                key={p.sessionId || p.id}
                 style={{
                   padding: '1rem',
                   borderBottom: '1px solid var(--gray-light)',
                   display: 'flex',
                   alignItems: 'center',
+                  justifyContent: 'space-between',
                   fontWeight: 600
                 }}
               >
-                <div style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '50%',
-                  backgroundColor: p.isHost ? 'var(--primary)' : 'var(--secondary)',
-                  color: 'white',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginRight: '1rem',
-                  fontSize: '0.875rem'
-                }}>
-                  {p.name.charAt(0)}
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <div style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    backgroundColor: p.isHost ? 'var(--primary)' : 'var(--secondary)',
+                    color: 'white',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginRight: '1rem',
+                    fontSize: '0.875rem',
+                    opacity: p.connected ? 1 : 0.5
+                  }}>
+                    {p.name.charAt(0)}
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span>
+                      {p.name}
+                      {p.isHost && <span style={{fontSize: '0.75rem', color:'var(--primary)', marginLeft: '0.5rem'}}>(ホスト)</span>}
+                      {!p.connected && <span style={{fontSize: '0.75rem', color:'var(--gray-medium)', marginLeft: '0.5rem'}}>(接続切れ)</span>}
+                    </span>
+                  </div>
                 </div>
-                {p.name} {p.isHost && <span style={{fontSize: '0.75rem', color:'var(--primary)', marginLeft: '0.5rem'}}>(ホスト)</span>}
+
+                {isHost && !p.isHost && (
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button 
+                      className="btn btn-secondary" 
+                      style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', width: 'auto' }} 
+                      onClick={() => {
+                        if (window.confirm(`${p.name}にホスト権限を譲りますか？`)) {
+                          socket.emit('transfer_host', { roomId, targetSessionId: p.sessionId });
+                        }
+                      }}>
+                      ホストにする
+                    </button>
+                    <button 
+                      className="btn btn-secondary" 
+                      style={{ backgroundColor: '#FFebF0', color: '#E53E3E', border: 'none', padding: '0.25rem 0.5rem', fontSize: '0.75rem', width: 'auto' }} 
+                      onClick={() => {
+                        if (window.confirm(`${p.name}をキックしますか？`)) {
+                          socket.emit('kick_player', { roomId, targetSessionId: p.sessionId });
+                        }
+                      }}>
+                      キック
+                    </button>
+                  </div>
+                )}
               </li>
             ))}
           </ul>
@@ -138,8 +190,8 @@ function Room({ socket, room, isHost, playerName }) {
             <button className="btn btn-secondary" style={{ marginBottom: '0.75rem' }} onClick={() => handleStartGame('unanimous')}>
               全員一致ゲーム
             </button>
-            <button className="btn btn-secondary" style={{ marginBottom: '0.75rem' }} onClick={() => handleStartGame('age_guess')}>
-              AI年齢当てゲーム
+            <button className="btn btn-secondary" style={{ marginBottom: '0.75rem' }} onClick={() => handleStartGame('compatibility')}>
+              AI相性診断ゲーム
             </button>
             <button className="btn btn-secondary" style={{ marginBottom: '1.5rem' }} onClick={() => handleStartGame('face_analysis')}>
               AI人相誤診断ゲーム
@@ -168,8 +220,8 @@ function Room({ socket, room, isHost, playerName }) {
       {room.state.game === 'unanimous' && (
         <Unanimous socket={socket} room={room} isHost={isHost} playerName={playerName} roomId={roomId} />
       )}
-      {room.state.game === 'age_guess' && (
-        <AIGuessAge socket={socket} room={room} isHost={isHost} playerName={playerName} roomId={roomId} />
+      {room.state.game === 'compatibility' && (
+        <AICompatibility socket={socket} room={room} isHost={isHost} playerName={playerName} roomId={roomId} />
       )}
       {room.state.game === 'face_analysis' && (
         <AIFaceAnalysis socket={socket} room={room} isHost={isHost} playerName={playerName} roomId={roomId} />
