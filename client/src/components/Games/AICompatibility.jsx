@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 
+const API_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+
 const BLOOD_TYPES = ['A型', 'B型', 'O型', 'AB型', '不明'];
 const MBTI_TYPES = [
   'INTJ (建築家)', 'INTP (論理学者)', 'ENTJ (指揮官)', 'ENTP (討論者)', 
@@ -146,7 +148,7 @@ function AICompatibility({ socket, room, isHost, playerName, roomId }) {
     };
 
     try {
-      await fetch('http://localhost:3001/api/ai/submit_compatibility_profile', {
+      await fetch(`${API_URL}/api/ai/submit_compatibility_profile`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ roomId, socketId: socket.id, profile })
@@ -192,7 +194,7 @@ function AICompatibility({ socket, room, isHost, playerName, roomId }) {
       const p1 = gameData.results[pairIds[0]];
       const p2 = gameData.results[pairIds[1]];
       
-      const response = await fetch('http://localhost:3001/api/ai/compatibility_pair', {
+      const response = await fetch(`${API_URL}/api/ai/compatibility_pair`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ profiles: [p1, p2] })
@@ -222,7 +224,7 @@ function AICompatibility({ socket, room, isHost, playerName, roomId }) {
     
     setIsAdditionalLoading(true);
     try {
-      await fetch('http://localhost:3001/api/ai/compatibility_additional', {
+      await fetch(`${API_URL}/api/ai/compatibility_additional`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ roomId, prompt: finalPrompt })

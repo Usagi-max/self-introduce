@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import html2canvas from 'html2canvas';
 import ReactMarkdown from 'react-markdown';
 
+const API_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+
 const FACE_PROMPTS = [
   '悪そうな顔',
   'ピュアそうな顔・優しそうな顔',
@@ -124,7 +126,7 @@ function AIFaceAnalysis({ socket, room, isHost, playerName, roomId }) {
   const submitPhoto = async () => {
     setMySubmission(true);
     try {
-      await fetch('http://localhost:3001/api/ai/submit_face', {
+      await fetch(`${API_URL}/api/ai/submit_face`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ roomId, socketId: socket.id, playerName, imageData, promptId: gameData.prompt })
@@ -142,7 +144,7 @@ function AIFaceAnalysis({ socket, room, isHost, playerName, roomId }) {
     
     setIsAdditionalLoading(true);
     try {
-      await fetch('http://localhost:3001/api/ai/face_additional', {
+      await fetch(`${API_URL}/api/ai/face_additional`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ roomId, prompt: finalPrompt })
