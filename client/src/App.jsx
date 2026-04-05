@@ -7,7 +7,7 @@ import Room from './components/Room'
 import AdBanner from './components/Ads/AdBanner'
 
 // Use environment variable for backend URL in production, fallback to localhost for development
-const SOCKET_SERVER_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+const SOCKET_SERVER_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001').replace(/\/$/, "");
 
 function Register() {
   return (
