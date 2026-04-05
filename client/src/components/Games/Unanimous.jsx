@@ -10,8 +10,9 @@ const QUESTIONS = [
 function Unanimous({ socket, room, isHost, playerName, roomId }) {
   const [answer, setAnswer] = useState('');
   const [mySubmission, setMySubmission] = useState(false);
+  const [customPrompt, setCustomPrompt] = useState('');
 
-  const gameData = room.state.gameData || { question: '', answers: {}, phase: 'waiting' };
+  const gameData = room.state.gameData || { question: '', answers: {}, phase: 'waiting', chooserIndex: 0, round: 1 };
 
   // Reset local state if server starts a new round (question changes or answers clear)
   useEffect(() => {
@@ -22,11 +23,10 @@ function Unanimous({ socket, room, isHost, playerName, roomId }) {
   }, [gameData.question, gameData.answers, socket.id]);
   
   const setupGame = () => {
-    const randomQuestion = QUESTIONS[Math.floor(Math.random() * QUESTIONS.length)];
     socket.emit('update_game_state', {
       roomId,
       payload: {
-        gameData: { question: randomQuestion, answers: {}, phase: 'input' }
+        gameData: { question: '', answers: {}, phase: 'prompt_selection', chooserIndex: 0, round: 1 }
       }
     });
   };
@@ -47,21 +47,89 @@ function Unanimous({ socket, room, isHost, playerName, roomId }) {
     setMySubmission(true);
   };
 
-  const resetGame = () => {
+  const nextRound = () => {
     setMySubmission(false);
     setAnswer('');
-    setupGame();
+    
+    let newIdx = (gameData.chooserIndex || 0) + 1;
+    let newRound = gameData.round || 1;
+    
+    if (newIdx >= room.players.length) {
+      newIdx = 0;
+      newRound++;
+    }
+
+    socket.emit('update_game_state', {
+      roomId,
+      payload: {
+        gameData: { ...gameData, question: '', answers: {}, phase: 'prompt_selection', chooserIndex: newIdx, round: newRound }
+      }
+    });
   };
 
   // Auto setup on init if host
   useEffect(() => {
-    if (isHost && !gameData.question) {
+    if (isHost && (!room.state.gameData || room.state.gameData.phase === 'waiting' || !room.state.gameData.phase)) {
       setupGame();
     }
   }, []);
 
   if (gameData.phase === 'waiting') {
     return <div className="card center-content"><p>ゲームを準備中...</p></div>;
+  }
+
+  if (gameData.phase === 'prompt_selection') {
+    const currentChooser = room.players[gameData.chooserIndex || 0] || room.players[0];
+    const isMyTurn = currentChooser && currentChooser.id === socket.id;
+
+    if (isMyTurn) {
+      return (
+        <div className="card animate-pop" style={{ padding: '2rem' }}>
+          <h2 style={{ color: 'var(--primary)', marginBottom: '1.5rem', textAlign: 'center' }}>
+            あなたがお題を決める番です！ <span style={{ fontSize: '1rem', color: 'var(--gray-medium)' }}>(ラウンド {gameData.round || 1})</span>
+          </h2>
+          <p style={{ marginBottom: '1rem', fontWeight: 'bold' }}>既存のリストから選ぶ:</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '2rem' }}>
+            {QUESTIONS.map((q, i) => (
+              <button key={i} className="btn btn-secondary" style={{ textAlign: 'left', backgroundColor: 'var(--white)', color: 'var(--gray-dark)' }} onClick={() => {
+                socket.emit('update_game_state', { roomId, payload: { gameData: { ...gameData, question: q, phase: 'input' } } });
+              }}>{q}</button>
+            ))}
+          </div>
+          
+          <div style={{ padding: '1.5rem', backgroundColor: 'var(--light)', borderRadius: '8px' }}>
+            <p style={{ marginBottom: '0.5rem', fontWeight: 'bold' }}>自分で好きなお題を入力する:</p>
+            <input 
+              className="input-field" 
+              placeholder="例: 無人島に一つだけ持っていくなら？" 
+              value={customPrompt} 
+              onChange={e => setCustomPrompt(e.target.value)} 
+            />
+            <button 
+              className="btn btn-primary" 
+              style={{ width: '100%' }} 
+              disabled={!customPrompt.trim()}
+              onClick={() => {
+                socket.emit('update_game_state', { roomId, payload: { gameData: { ...gameData, question: customPrompt.trim(), phase: 'input' } } });
+                setCustomPrompt('');
+              }}
+            >
+              このお題でゲーム開始
+            </button>
+          </div>
+        </div>
+      );
+    } else {
+      return (
+        <div className="card center-content animate-pop" style={{ minHeight: '60vh' }}>
+          <div className="loader" style={{ marginBottom: '2rem' }}></div>
+          <h2 style={{ fontSize: '1.5rem' }}>
+            <span style={{ color: 'var(--primary)' }}>{currentChooser?.name}</span> がお題を選んでいます...
+          </h2>
+          <p style={{ color: 'var(--gray-medium)', marginTop: '1rem' }}>(ラウンド {gameData.round || 1})</p>
+        </div>
+      );
+    }
   }
 
   if (gameData.phase === 'input') {
@@ -146,8 +214,8 @@ function Unanimous({ socket, room, isHost, playerName, roomId }) {
       </div>
 
       {isHost && (
-        <button className="btn btn-primary" style={{ marginTop: '2rem' }} onClick={resetGame}>
-          もう一回遊ぶ
+        <button className="btn btn-primary" style={{ marginTop: '2rem' }} onClick={nextRound}>
+          次のお題へ（出題者を交代）
         </button>
       )}
     </div>
