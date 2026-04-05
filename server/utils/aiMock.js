@@ -5,11 +5,15 @@ const { GoogleGenAI } = require('@google/genai');
  * to match the Claude Messages API structure for an easy swap later.
  */
 const generateMockResponse = async (promptText, type, imageData = null, persona = 'michael') => {
-  const apiKey = process.env.GEMINI_API_KEY;
-
-  if (apiKey) {
+  const rawKey = process.env.GEMINI_API_KEY || "";
+  // カンマ区切りで複数のAPIキーが設定されていた場合、配列にする
+  const apiKeys = rawKey.split(',').map(k => k.trim()).filter(k => k.length > 0);
+  
+  if (apiKeys.length > 0) {
     try {
-      const ai = new GoogleGenAI({ apiKey });
+      // 毎回ランダムにキーを1つ選んで負荷を分散する
+      const selectedKey = apiKeys[Math.floor(Math.random() * apiKeys.length)];
+      const ai = new GoogleGenAI({ apiKey: selectedKey });
       
       let systemPrompt = "あなたはユーザーの発言に対して面白くユーモアのある返答をするAIです。";
       if (type === 'compatibility') {
