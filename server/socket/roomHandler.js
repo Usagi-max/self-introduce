@@ -106,7 +106,7 @@ module.exports = {
     callback({ success: true, roomId, room: rooms[roomId] });
   });
 
-  socket.on('join_room', ({ roomId, playerName, sessionId }, callback) => {
+  socket.on('join_room', ({ roomId, playerName, sessionId, forceOverride }, callback) => {
     const room = rooms[roomId];
     if (!room) return callback({ success: false, message: 'Room not found' });
     if (!sessionId) return callback({ success: false, message: 'Missing session ID' });
@@ -117,14 +117,23 @@ module.exports = {
         existing.name = playerName;
         existing.connected = true;
     } else {
-        room.players.push({ 
-          id: socket.id, 
-          sessionId,
-          name: playerName, 
-          isHost: false,
-          connected: true,
-          metadata: { points: 0, penaltiesByGame: { unanimous: 0, face_analysis: 0 }, characterStrategyLevel: null } 
-        });
+        const nameConflict = room.players.find(p => p.name === playerName);
+        if (nameConflict && !forceOverride) {
+            return callback({ success: false, error: 'name_conflict' });
+        } else if (nameConflict && forceOverride) {
+            nameConflict.id = socket.id;
+            nameConflict.sessionId = sessionId;
+            nameConflict.connected = true;
+        } else {
+            room.players.push({ 
+              id: socket.id, 
+              sessionId,
+              name: playerName, 
+              isHost: false,
+              connected: true,
+              metadata: { points: 0, penaltiesByGame: { unanimous: 0, face_analysis: 0 }, characterStrategyLevel: null } 
+            });
+        }
     }
 
     socket.join(roomId);
@@ -191,6 +200,34 @@ module.exports = {
         io.to(roomId).emit('room_updated', room);
       }
     }
+  });
+
+  socket.on('transfer_player_data', ({ roomId, sourceSessionId, targetSessionId, mode }) => {
+    const room = rooms[roomId];
+    if (!room) return;
+    
+    // Check if requester is host
+    const requester = room.players.find(p => p.id === socket.id);
+    if (!requester || !requester.isHost) return;
+
+    const source = room.players.find(p => p.sessionId === sourceSessionId);
+    const target = room.players.find(p => p.sessionId === targetSessionId);
+    if (!source || !target || source === target) return;
+
+    if (mode === 'overwrite') {
+       target.metadata = { ...source.metadata };
+    } else if (mode === 'penalties_only') {
+       const sBg = source.metadata?.penaltiesByGame || { unanimous: 0, face_analysis: 0 };
+       const tBg = target.metadata?.penaltiesByGame || { unanimous: 0, face_analysis: 0 };
+       if (!target.metadata) target.metadata = {};
+       target.metadata.penaltiesByGame = {
+         unanimous: (tBg.unanimous || 0) + (sBg.unanimous || 0),
+         face_analysis: (tBg.face_analysis || 0) + (sBg.face_analysis || 0)
+       };
+       target.metadata.penalties = (target.metadata?.penalties || 0) + (source.metadata?.penalties || 0);
+    }
+    
+    io.to(roomId).emit('room_updated', room);
   });
 
   socket.on('leave_room', ({ roomId }) => {

@@ -52,6 +52,56 @@ const ProfileModal = ({ player, onClose }) => {
   );
 };
 
+const TransferModal = ({ sourcePlayer, candidates, onTransfer, onClose }) => {
+  const [targetId, setTargetId] = useState('');
+  const [mode, setMode] = useState('overwrite');
+
+  if (!sourcePlayer) return null;
+
+  return (
+    <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center' }} onClick={onClose}>
+      <div style={{ backgroundColor: '#fff', padding: '2rem', borderRadius: '16px', maxWidth: '500px', width: '90%' }} onClick={e => e.stopPropagation()}>
+        <h3 style={{ margin: '0 0 1rem 0', color: 'var(--primary)' }}>データ引き継ぎ</h3>
+        <p style={{ fontSize: '0.9rem', marginBottom: '1.5rem', color: 'var(--gray-dark)' }}>
+          <strong>{sourcePlayer.name}</strong> のデータを誰に引き継ぎますか？
+        </p>
+        
+        <div style={{ marginBottom: '1rem' }}>
+          <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.5rem' }}>引継ぎ先</label>
+          <select className="input-field" value={targetId} onChange={e => setTargetId(e.target.value)}>
+            <option value="">選択してください</option>
+            {candidates.map(c => (
+              <option key={c.sessionId} value={c.sessionId}>{c.name}</option>
+            ))}
+          </select>
+        </div>
+
+        <div style={{ marginBottom: '1.5rem' }}>
+          <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.5rem' }}>引継ぎモード</label>
+          <label style={{ display: 'block', marginBottom: '0.5rem', cursor: 'pointer' }}>
+            <input type="radio" name="mode" value="overwrite" checked={mode === 'overwrite'} onChange={() => setMode('overwrite')} style={{ marginRight: '0.5rem' }} />
+            完全上書き (プロフィール等のステータスも引き継ぐ)
+          </label>
+          <label style={{ display: 'block', cursor: 'pointer' }}>
+            <input type="radio" name="mode" value="penalties_only" checked={mode === 'penalties_only'} onChange={() => setMode('penalties_only')} style={{ marginRight: '0.5rem' }} />
+            戦犯回数のみ加算
+          </label>
+        </div>
+
+        <div style={{ display: 'flex', gap: '1rem' }}>
+          <button className="btn btn-primary" disabled={!targetId} onClick={() => {
+            if(window.confirm('本当に引き継ぎを実行しますか？')) {
+              onTransfer(sourcePlayer.sessionId, targetId, mode);
+              onClose();
+            }
+          }}>実行する</button>
+          <button className="btn btn-secondary" onClick={onClose}>キャンセル</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 function Room({ socket, room, isHost, playerName }) {
   const { roomId } = useParams();
   const navigate = useNavigate();
@@ -59,6 +109,7 @@ function Room({ socket, room, isHost, playerName }) {
   const [copiedLink, setCopiedLink] = useState(false);
   const [mustSetup, setMustSetup] = useState(location.state?.isNew || false);
   const [selectedProfilePlayer, setSelectedProfilePlayer] = useState(null);
+  const [transferSourcePlayer, setTransferSourcePlayer] = useState(null);
 
   // If page refershed and context lost, return home
   useEffect(() => {
@@ -92,6 +143,10 @@ function Room({ socket, room, isHost, playerName }) {
       sessionStorage.removeItem('savedRoomId');
       navigate('/');
     }
+  };
+
+  const executeTransfer = (sourceSessionId, targetSessionId, mode) => {
+    socket.emit('transfer_player_data', { roomId, sourceSessionId, targetSessionId, mode });
   };
 
   // Lobby state
@@ -238,28 +293,38 @@ function Room({ socket, room, isHost, playerName }) {
                   </div>
                 </div>
 
-                {isHost && !p.isHost && (
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                {isHost && (
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'flex-end', flex: 1 }}>
                     <button 
                       className="btn btn-secondary" 
                       style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', width: 'auto' }} 
-                      onClick={() => {
-                        if (window.confirm(`${p.name}にホスト権限を譲りますか？`)) {
-                          socket.emit('transfer_host', { roomId, targetSessionId: p.sessionId });
-                        }
-                      }}>
-                      ホストにする
+                      onClick={() => setTransferSourcePlayer(p)}>
+                      🔄 引継ぎ
                     </button>
-                    <button 
-                      className="btn btn-secondary" 
-                      style={{ backgroundColor: '#FFebF0', color: '#E53E3E', border: 'none', padding: '0.25rem 0.5rem', fontSize: '0.75rem', width: 'auto' }} 
-                      onClick={() => {
-                        if (window.confirm(`${p.name}をキックしますか？`)) {
-                          socket.emit('kick_player', { roomId, targetSessionId: p.sessionId });
-                        }
-                      }}>
-                      キック
-                    </button>
+                    {!p.isHost && (
+                      <>
+                        <button 
+                          className="btn btn-secondary" 
+                          style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', width: 'auto' }} 
+                          onClick={() => {
+                            if (window.confirm(`${p.name}にホスト権限を譲りますか？`)) {
+                              socket.emit('transfer_host', { roomId, targetSessionId: p.sessionId });
+                            }
+                          }}>
+                          ホストにする
+                        </button>
+                        <button 
+                          className="btn btn-secondary" 
+                          style={{ backgroundColor: '#FFebF0', color: '#E53E3E', border: 'none', padding: '0.25rem 0.5rem', fontSize: '0.75rem', width: 'auto' }} 
+                          onClick={() => {
+                            if (window.confirm(`${p.name}をキックしますか？`)) {
+                              socket.emit('kick_player', { roomId, targetSessionId: p.sessionId });
+                            }
+                          }}>
+                          キック
+                        </button>
+                      </>
+                    )}
                   </div>
                 )}
               </li>
@@ -312,6 +377,15 @@ function Room({ socket, room, isHost, playerName }) {
 
         {selectedProfilePlayer && (
           <ProfileModal player={selectedProfilePlayer} onClose={() => setSelectedProfilePlayer(null)} />
+        )}
+
+        {transferSourcePlayer && (
+          <TransferModal 
+            sourcePlayer={transferSourcePlayer} 
+            candidates={room.players.filter(p => p.id !== transferSourcePlayer.id)} 
+            onTransfer={executeTransfer} 
+            onClose={() => setTransferSourcePlayer(null)} 
+          />
         )}
       </div>
     );

@@ -106,16 +106,20 @@ function App() {
     });
   };
 
-  const handleJoinRoom = (roomId, name) => {
+  const handleJoinRoom = (roomId, name, forceOverride = false) => {
     setIsLoading(true);
     setPlayerName(name);
-    socket.emit('join_room', { roomId, playerName: name, sessionId }, (response) => {
+    socket.emit('join_room', { roomId, playerName: name, sessionId, forceOverride }, (response) => {
       setIsLoading(false);
       if (response.success) {
         setRoom(response.room);
         setIsHost(false);
         sessionStorage.setItem('savedRoomId', roomId);
         navigate(`/room/${roomId}`);
+      } else if (response.error === 'name_conflict') {
+        if (window.confirm(`同名ユーザー「${name}」が既にルームにいます。このユーザーデータを上書きして復活（ログイン）しますか？`)) {
+          handleJoinRoom(roomId, name, true);
+        }
       } else {
         alert(response.message || 'Failed to join room');
       }

@@ -14,7 +14,11 @@ app.use(express.json({ limit: '50mb' })); // allow larger payload for base64 ima
 
 function cleanJsonString(str) {
   try {
-    return str.replace(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/ig, '$1').trim();
+    let s = str.replace(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/ig, '$1').trim();
+    // Gemini sometimes hallucinates and concatenates json blocks like {...}{...}
+    const match = s.match(/^(\s*\{[\s\S]*?\})\s*\{/);
+    if (match) return match[1];
+    return s;
   } catch (e) {
     return str;
   }
@@ -64,14 +68,14 @@ app.post('/api/ai/compatibility_pair', async (req, res) => {
 });
 
 app.post('/api/ai/compatibility_additional', async (req, res) => {
-  const { roomId, prompt } = req.body;
+  const { roomId, prompt, persona } = req.body;
   if (!rooms[roomId]) return res.status(404).json({error: 'Room not found'});
   
   const results = rooms[roomId].state.gameData.results;
   const profilesArray = Object.values(results);
   const promptText = JSON.stringify({ context: profilesArray, userPrompt: prompt }, null, 2);
   
-  const aiResponse = await generateMockResponse(promptText, 'compatibility_additional');
+  const aiResponse = await generateMockResponse(promptText, 'compatibility_additional', null, persona);
   const messageText = aiResponse.content[0].text;
   
   if (rooms[roomId]) {

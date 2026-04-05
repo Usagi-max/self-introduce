@@ -56,11 +56,6 @@ function Roulette({ socket, room, isHost, playerName, roomId }) {
           gameData: { phase: 'result', spinning: false, resultTopic: randomTopic, resultPlayer: randomPlayer }
         }
       });
-      socket.emit('update_player_metadata', {
-        roomId,
-        playerId: randomPlayer.id,
-        payload: { penalties: (randomPlayer.metadata?.penalties || 0) + 1 }
-      });
     }, 3000);
   };
 

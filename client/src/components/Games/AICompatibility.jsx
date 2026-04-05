@@ -29,6 +29,17 @@ const ADDITIONAL_DIAGNOSIS_PRESETS = [
   "自由入力"
 ];
 
+const NumberCounter = ({ label, value, min = 1, max = 20, onChange }) => (
+  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', backgroundColor: 'var(--light)', padding: '0.5rem 1rem', borderRadius: '8px' }}>
+    <label style={{ fontWeight: 'bold', margin: 0, color: 'var(--gray-dark)' }}>{label}</label>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+      <button className="btn btn-secondary" style={{ padding: 0, width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%' }} onClick={() => onChange(Math.max(min, Number(value) - 1))}>-</button>
+      <span style={{ minWidth: '24px', textAlign: 'center', fontWeight: 'bold' }}>{value}</span>
+      <button className="btn btn-secondary" style={{ padding: 0, width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%' }} onClick={() => onChange(Math.min(max, Number(value) + 1))}>+</button>
+    </div>
+  </div>
+);
+
 function AICompatibility({ socket, room, isHost, playerName, roomId }) {
   const [bloodType, setBloodType] = useState('不明');
   const [mbti, setMbti] = useState('不明');
@@ -185,6 +196,43 @@ function AICompatibility({ socket, room, isHost, playerName, roomId }) {
     }
   };
 
+  const reEvaluateWithPersona = async (newPersona) => {
+    socket.emit('update_game_state', {
+      roomId,
+      payload: { gameData: { ...gameData, phase: 'analyzing_pair' } }
+    });
+    
+    try {
+      const p1 = gameData.results[gameData.currentPair[0]];
+      const p2 = gameData.results[gameData.currentPair[1]];
+      
+      const response = await fetch(`${API_URL}/api/ai/compatibility_pair`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profiles: [p1, p2], persona: newPersona })
+      });
+      const aiContext = await response.json();
+      const messageText = aiContext.content[0].text;
+      
+      let parsed = { theme: '謎の二人', compatibility: 0, details: messageText };
+      try { parsed = JSON.parse(messageText); } catch(e) {}
+
+      socket.emit('update_game_state', {
+        roomId,
+        payload: { 
+          gameData: { 
+            ...gameData,
+            phase: 'reveal_pair', 
+            pairAnalysis: parsed
+          } 
+        }
+      });
+    } catch(e) {
+      console.error(e);
+      alert('AI再診断エラー');
+    }
+  };
+
   const spinRoulette = () => {
     const allPairs = [];
     for (let i = 0; i < players.length; i++) {
@@ -330,19 +378,9 @@ function AICompatibility({ socket, room, isHost, playerName, roomId }) {
 
         <div style={{ marginBottom: '2rem', padding: '1rem', backgroundColor: 'var(--light)', borderRadius: 'var(--radius-md)' }}>
           <label className="input-label" style={{ borderBottom: '1px solid var(--gray-light)', paddingBottom: '0.5rem', marginBottom: '1rem' }}>兄弟構成</label>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
-            <div>
-              <label style={{ fontSize: '0.875rem', fontWeight: 'bold' }}>自分を含めた兄弟の合計人数</label>
-              <input type="number" min="1" max="20" className="input-field" value={siblingsCount} onChange={handleSiblingsCountChange} />
-            </div>
-            <div>
-              <label style={{ fontSize: '0.875rem', fontWeight: 'bold' }}>自分は上から何番目？</label>
-              <select className="input-field" value={birthOrder} onChange={e => setBirthOrder(Number(e.target.value))}>
-                {Array.from({ length: siblingsCount }, (_, i) => i + 1).map(n => (
-                  <option key={n} value={n}>{n}番目</option>
-                ))}
-              </select>
-            </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
+            <NumberCounter label="兄弟の合計人数" value={siblingsCount} max={20} onChange={handleSiblingsCountChange} />
+            <NumberCounter label="あなたは上から何番目？" value={birthOrder} min={1} max={siblingsCount} onChange={n => setBirthOrder(Number(n))} />
           </div>
 
           <div style={{ marginBottom: '1rem' }}>
@@ -385,12 +423,7 @@ function AICompatibility({ socket, room, isHost, playerName, roomId }) {
               {hasCloseSibling && (
                 <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', paddingLeft: '1.75rem' }}>
                   <div>
-                    <label style={{ fontSize: '0.875rem', display: 'block', marginBottom: '0.25rem', color: 'var(--gray-medium)' }}>どの兄弟ですか？（上から何番目か）</label>
-                    <select className="input-field" value={closeSiblingRank} onChange={e => setCloseSiblingRank(e.target.value)} style={{ width: '150px' }}>
-                      {Array.from({ length: siblingsCount }, (_, i) => i + 1).map(n => (
-                        <option key={n} value={n}>{n}番目</option>
-                      ))}
-                    </select>
+                    <NumberCounter label="どの兄弟ですか？（上から何番目か）" value={closeSiblingRank} min={1} max={siblingsCount} onChange={n => setCloseSiblingRank(Number(n))} />
                   </div>
                   <div>
                     <label style={{ fontSize: '0.875rem', display: 'block', marginBottom: '0.25rem', color: 'var(--gray-medium)' }}>その兄弟と仲が良い理由（任意）</label>
@@ -538,6 +571,14 @@ function AICompatibility({ socket, room, isHost, playerName, roomId }) {
         </div>
 
         <div style={{ marginTop: '1rem', display: 'flex', gap: '1rem', flexDirection: 'column' }}>
+          
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', justifyContent: 'center', backgroundColor: '#fff', padding: '1rem', borderRadius: '8px', border: '1px solid var(--gray-light)' }}>
+             <p style={{ width: '100%', textAlign: 'center', fontSize: '0.875rem', fontWeight: 'bold', color: 'var(--gray-dark)', margin: '0 0 0.5rem 0' }}>💡別の診断士にも意見を聞いてみる</p>
+             <button className="btn btn-secondary" style={{ flex: 1, minWidth: '120px', padding: '0.5rem' }} onClick={() => reEvaluateWithPersona('michael')}>🇺🇸 マイケルに聞く</button>
+             <button className="btn btn-secondary" style={{ flex: 1, minWidth: '120px', padding: '0.5rem' }} onClick={() => reEvaluateWithPersona('butler')}>🤵 セバスチャンに聞く</button>
+             <button className="btn btn-secondary" style={{ flex: 1, minWidth: '120px', padding: '0.5rem' }} onClick={() => reEvaluateWithPersona('gal')}>💅 辛口ギャルに聞く</button>
+          </div>
+
           <button className="btn btn-primary" onClick={spinRoulette}>
             次のペアを診断する 🎯
           </button>
