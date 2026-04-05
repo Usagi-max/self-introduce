@@ -14,9 +14,25 @@ function Penalty({ socket, room, isHost, roomId }) {
   const [spinTarget, setSpinTarget] = useState('???');
   const [spinPenalty, setSpinPenalty] = useState('???');
   const [newTopicInput, setNewTopicInput] = useState('');
+  const [targetIds, setTargetIds] = useState([]);
 
   const currentTopics = room.state.penaltyTopics || PENALTY_PRESETS[0].topics;
   const gameData = room.state.gameData || { phase: 'setup', type: null, target: null };
+
+  // Set default targets to everyone
+  useEffect(() => {
+    if (targetIds.length === 0 && room.players.length > 0) {
+      setTargetIds(room.players.map(p => p.id));
+    }
+  }, [room.players]);
+
+  const toggleTarget = (id) => {
+    if (targetIds.includes(id)) {
+      setTargetIds(targetIds.filter(t => t !== id));
+    } else {
+      setTargetIds([...targetIds, id]);
+    }
+  };
 
   // Chaotic text spinner effect
   useEffect(() => {
@@ -62,8 +78,13 @@ function Penalty({ socket, room, isHost, roomId }) {
       alert('罰ゲームの種類を1つ以上設定してください。');
       return;
     }
+    const validPlayers = room.players.filter(p => targetIds.includes(p.id));
+    if (validPlayers.length === 0) {
+      alert('罰ゲームの対象者を1人以上選んでください。');
+      return;
+    }
 
-    const resultPlayer = room.players[Math.floor(Math.random() * room.players.length)];
+    const resultPlayer = validPlayers[Math.floor(Math.random() * validPlayers.length)];
     const resultPenalty = currentTopics[Math.floor(Math.random() * currentTopics.length)];
 
     socket.emit('update_game_state', {
@@ -91,6 +112,11 @@ function Penalty({ socket, room, isHost, roomId }) {
             gameData: { phase: 'execute', target: resultPlayer, type: resultPenalty }
           }
         });
+        socket.emit('update_player_metadata', {
+          roomId,
+          playerId: resultPlayer.id,
+          payload: { penalties: (resultPlayer.metadata?.penalties || 0) + 1 }
+        });
       }, 3000);
 
     }, 3000);
@@ -116,6 +142,24 @@ function Penalty({ socket, room, isHost, roomId }) {
       <div className="card set-content animate-pop" style={{ textAlign: 'left' }}>
         <h3 style={{ marginBottom: '1.5rem', color: '#E53E3E', textAlign: 'center' }}>💀 罰ゲームルーレット設定</h3>
         
+        {/* Target Selection */}
+        <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#fff5f5', borderRadius: '8px', border: '1px solid #fed7d7' }}>
+           <p style={{ fontSize: '0.875rem', fontWeight: 'bold', marginBottom: '0.5rem', color: '#E53E3E' }}>ルーレットの対象者を選択</p>
+           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+             {room.players.map(p => (
+               <label key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.9rem' }}>
+                 <input 
+                   type="checkbox" 
+                   checked={targetIds.includes(p.id)} 
+                   onChange={() => toggleTarget(p.id)} 
+                   style={{ width: '1.2rem', height: '1.2rem', accentColor: '#E53E3E' }}
+                 />
+                 {p.name}
+               </label>
+             ))}
+           </div>
+        </div>
+
         <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', paddingBottom: '0.5rem', marginBottom: '1rem' }}>
           {PENALTY_PRESETS.map((preset, i) => (
             <button 
@@ -266,7 +310,7 @@ function Penalty({ socket, room, isHost, roomId }) {
         textAlign: 'center'
       }}>
         <p style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--dark)' }}>
-          {gameData.type?.label}
+          {typeof gameData.type === 'string' ? gameData.type : gameData.type?.label}
         </p>
       </div>
 

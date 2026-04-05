@@ -225,6 +225,17 @@ module.exports = {
     }
   });
 
+  socket.on('update_player_metadata', ({ roomId, playerId, payload }) => {
+    const room = rooms[roomId];
+    if (room) {
+      const player = room.players.find(p => p.id === playerId);
+      if (player) {
+        player.metadata = { ...player.metadata, ...payload };
+        io.to(roomId).emit('room_updated', room);
+      }
+    }
+  });
+
   socket.on('disconnect', () => {
     console.log('User disconnected:', socket.id);
     handleDisconnect();

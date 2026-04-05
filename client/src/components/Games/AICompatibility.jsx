@@ -310,12 +310,25 @@ function AICompatibility({ socket, room, isHost, playerName, roomId }) {
                 const isMe = (idx + 1) === birthOrder;
                 return (
                   <div key={idx} style={{ padding: '0.5rem', backgroundColor: isMe ? 'rgba(0,166,153,0.1)' : '#fff', border: isMe ? '2px solid var(--primary)' : '1px solid var(--gray-light)', borderRadius: '8px', textAlign: 'center' }}>
-                    <div style={{ fontSize: '0.75rem', marginBottom: '0.25rem', fontWeight: isMe ? 'bold' : 'normal', color: isMe ? 'var(--primary)' : 'var(--gray-medium)' }}>
+                    <div style={{ fontSize: '0.75rem', marginBottom: '0.5rem', fontWeight: isMe ? 'bold' : 'normal', color: isMe ? 'var(--primary)' : 'var(--gray-medium)' }}>
                       {idx + 1}番目 {isMe && '(自分)'}
                     </div>
-                    <select className="input-field" style={{ marginBottom: 0, padding: '0.25rem' }} value={gender} onChange={e => handleSiblingGenderChange(idx, e.target.value)}>
-                      {GENDER_TYPES.map(t => <option key={t}>{t}</option>)}
-                    </select>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      {['男性', '女性', 'その他'].map(t => (
+                         <button 
+                            key={t}
+                            className="btn btn-secondary"
+                            onClick={() => handleSiblingGenderChange(idx, t)}
+                            style={{
+                               padding: '0.25rem 0.5rem', 
+                               fontSize: '0.75rem', 
+                               backgroundColor: gender === t ? 'var(--primary)' : 'var(--white)',
+                               color: gender === t ? 'white' : 'var(--gray-dark)',
+                               border: gender === t ? '1px solid var(--primary)' : '1px solid var(--gray-light)'
+                            }}
+                         >{t}</button>
+                      ))}
+                    </div>
                   </div>
                 );
               })}

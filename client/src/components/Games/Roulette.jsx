@@ -5,6 +5,21 @@ function Roulette({ socket, room, isHost, playerName, roomId }) {
   const gameData = room.state.gameData || { phase: 'ready', spinning: false, resultTopic: '', resultPlayer: null };
   
   const [spinText, setSpinText] = useState('???');
+  const [targetIds, setTargetIds] = useState([]);
+
+  useEffect(() => {
+    if (targetIds.length === 0 && room.players.length > 0) {
+      setTargetIds(room.players.map(p => p.id));
+    }
+  }, [room.players]);
+
+  const toggleTarget = (id) => {
+    if (targetIds.includes(id)) {
+      setTargetIds(targetIds.filter(t => t !== id));
+    } else {
+      setTargetIds([...targetIds, id]);
+    }
+  };
 
   // Visual spinning effect
   useEffect(() => {
@@ -19,7 +34,10 @@ function Roulette({ socket, room, isHost, playerName, roomId }) {
   }, [gameData.spinning, topics]);
 
   const spinRoulette = () => {
-    const randomPlayer = room.players[Math.floor(Math.random() * room.players.length)];
+    const validPlayers = room.players.filter(p => targetIds.includes(p.id));
+    if (validPlayers.length === 0) return alert('対象者を1人以上選んでください');
+    
+    const randomPlayer = validPlayers[Math.floor(Math.random() * validPlayers.length)];
     const randomTopic = topics[Math.floor(Math.random() * topics.length)];
     
     // Emit spinning state
@@ -37,6 +55,11 @@ function Roulette({ socket, room, isHost, playerName, roomId }) {
         payload: {
           gameData: { phase: 'result', spinning: false, resultTopic: randomTopic, resultPlayer: randomPlayer }
         }
+      });
+      socket.emit('update_player_metadata', {
+        roomId,
+        playerId: randomPlayer.id,
+        payload: { penalties: (randomPlayer.metadata?.penalties || 0) + 1 }
       });
     }, 3000);
   };
@@ -122,14 +145,35 @@ function Roulette({ socket, room, isHost, playerName, roomId }) {
       </div>
 
       {isHost ? (
-        <button 
-          className="btn btn-primary"
-          onClick={spinRoulette}
-          disabled={gameData.spinning}
-          style={{ width: '100%', maxWidth: '280px', borderRadius: '100px', fontWeight: 800, fontSize: '1.1rem', padding: '1rem' }}
-        >
-          {gameData.spinning ? 'ルーレット回転中...' : (gameData.phase === 'result' ? 'もう一度回す！' : 'ルーレットを回す！')}
-        </button>
+        <div style={{ width: '100%', maxWidth: '280px' }}>
+          {!gameData.spinning && gameData.phase !== 'result' && (
+            <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: 'var(--light)', borderRadius: '8px', border: '1px solid var(--gray-light)' }}>
+              <p style={{ fontSize: '0.875rem', fontWeight: 'bold', marginBottom: '0.5rem', color: 'var(--gray-dark)' }}>ルーレットの対象者を選択</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                {room.players.map(p => (
+                  <label key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.9rem' }}>
+                    <input 
+                      type="checkbox" 
+                      checked={targetIds.includes(p.id)} 
+                      onChange={() => toggleTarget(p.id)} 
+                      style={{ width: '1.2rem', height: '1.2rem' }}
+                    />
+                    {p.name}
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          <button 
+            className="btn btn-primary"
+            onClick={spinRoulette}
+            disabled={gameData.spinning || targetIds.length === 0}
+            style={{ width: '100%', borderRadius: '100px', fontWeight: 800, fontSize: '1.1rem', padding: '1rem' }}
+          >
+            {gameData.spinning ? 'ルーレット回転中...' : (gameData.phase === 'result' ? 'もう一度回す！' : 'ルーレットを回す！')}
+          </button>
+        </div>
       ) : (
         <p style={{ color: 'var(--gray-medium)', fontWeight: 600 }}>
           {gameData.spinning ? 'ルーレット回転中...' : 'ホストがルーレットを回すのを待っています...'}

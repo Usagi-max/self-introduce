@@ -109,6 +109,31 @@ function Room({ socket, room, isHost, playerName }) {
           </div>
         </div>
 
+        {/* Global Scoreboard / War Criminal Ranking */}
+        {room.players.some(p => (p.metadata?.penalties || 0) > 0) && (
+          <div className="card animate-pop" style={{ marginBottom: '1.5rem', border: '3px solid #E53E3E', backgroundColor: '#FFF5F5' }}>
+            <h3 style={{ marginBottom: '1rem', color: '#E53E3E', textAlign: 'center' }}>🔥 総合 戦犯ランキング 🔥</h3>
+            <ul style={{ listStyle: 'none', padding: 0 }}>
+              {[...room.players]
+                .sort((a, b) => (b.metadata?.penalties || 0) - (a.metadata?.penalties || 0))
+                .map((p, i) => (
+                <li key={p.id} style={{ 
+                  display: 'flex', justifyContent: 'space-between', padding: '0.75rem 1rem', 
+                  borderBottom: '1px solid #fed7d7', 
+                  backgroundColor: i === 0 ? '#FED7D7' : 'transparent', 
+                  borderRadius: i === 0 ? '8px' : '0',
+                  fontWeight: i === 0 ? 900 : 600,
+                  fontSize: i === 0 ? '1.2rem' : '1rem',
+                  color: i === 0 ? '#C53030' : 'var(--dark)'
+                }}>
+                  <span>{i + 1}位 {i === 0 && '💀 (最大の戦犯)'} {p.name}</span>
+                  <span style={{ color: '#E53E3E' }}>罰ゲーム {p.metadata?.penalties || 0}回</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         <div className="card" style={{ flex: 1, marginBottom: '1.5rem' }}>
           <h3>参加者 ({room.players.length}人)</h3>
           <ul style={{ listStyle: 'none', padding: 0, marginTop: '1rem' }}>

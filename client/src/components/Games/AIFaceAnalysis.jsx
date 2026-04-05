@@ -228,9 +228,14 @@ function AIFaceAnalysis({ socket, room, isHost, playerName, roomId }) {
                 </div>
                 <button 
                   className="btn btn-primary"
-                  style={{ padding: '1.5rem', borderRadius: '50%', width: '80px', height: '80px', boxShadow: '0 4px 12px rgba(0,0,0,0.3)', display: 'flex', justifyContent: 'center', alignItems: 'center' }}
+                  style={{ padding: '0', borderRadius: '50%', width: '80px', height: '80px', boxShadow: '0 4px 12px rgba(0,0,0,0.3)', display: 'flex', justifyContent: 'center', alignItems: 'center' }}
                   onClick={capturePhoto}
-                ><span style={{ fontSize: '2rem' }}>📸</span></button>
+                >
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                    <circle cx="12" cy="13" r="4"></circle>
+                  </svg>
+                </button>
               </>
             ) : (
               <div style={{ margin: '2rem 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
