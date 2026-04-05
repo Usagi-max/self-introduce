@@ -239,13 +239,14 @@ function AICompatibility({ socket, room, isHost, playerName, roomId }) {
 
   if (gameData.phase === 'input') {
     const answeredCount = Object.keys(gameData.results || {}).length;
+    const activeCount = room.players.filter(p => p.connected).length;
 
     if (mySubmission) {
       return (
         <div className="card center-content animate-pop" style={{ minHeight: '60vh' }}>
           <h2 style={{ marginBottom: '1rem', fontSize: '1.5rem' }}>他のプレイヤーの回答を待っています...</h2>
           <div style={{ fontSize: '3rem', fontWeight: 900, color: 'var(--primary)', marginBottom: '1rem' }}>
-            {room.players.length - answeredCount}人 待ち
+            {Math.max(0, activeCount - answeredCount)}人 待ち
           </div>
           <div className="loader" style={{ marginTop: '2rem', marginBottom: '3rem' }}></div>
           <div style={{ padding: '2rem', backgroundColor: '#f5f7fa', borderRadius: '12px', border: '1px dashed var(--primary)' }}>

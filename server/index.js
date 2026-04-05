@@ -30,7 +30,8 @@ app.post('/api/ai/submit_compatibility_profile', (req, res) => {
   gameData.results[socketId] = profile;
   
   // Transition safely on server-side
-  if (Object.keys(gameData.results).length === rooms[roomId].players.length) {
+  const activeCount = rooms[roomId].players.filter(p => p.connected).length;
+  if (Object.keys(gameData.results).length >= activeCount) {
     gameData.phase = 'pair_selection';
   }
   
@@ -127,7 +128,9 @@ app.post('/api/ai/submit_face', async (req, res) => {
         }
         
         // Transition to reveal if everyone is done
-        const allDone = rooms[roomId].players.length > 0 && rooms[roomId].players.every(p => {
+        const activeConnected = rooms[roomId].players.filter(p => p.connected);
+        const allDone = activeConnected.length > 0 && activeConnected.every(p => {
+           // wait, socket.id vs p.id issue again? Yes, find by p.id
            const r = rooms[roomId].state.gameData.results.find(x => x.id === p.id);
            return r && r.status === 'done';
         });

@@ -236,6 +236,21 @@ module.exports = {
     }
   });
 
+  socket.on('submit_unanimous_answer', ({ roomId, answer }) => {
+    const room = rooms[roomId];
+    if (!room || !room.state.gameData) return;
+    
+    if (!room.state.gameData.answers) room.state.gameData.answers = {};
+    room.state.gameData.answers[socket.id] = answer;
+    
+    const activeCount = room.players.filter(p => p.connected).length;
+    if (Object.keys(room.state.gameData.answers).length >= activeCount) {
+      room.state.gameData.phase = 'reveal';
+    }
+    
+    io.to(roomId).emit('room_updated', room);
+  });
+
   socket.on('disconnect', () => {
     console.log('User disconnected:', socket.id);
     handleDisconnect();

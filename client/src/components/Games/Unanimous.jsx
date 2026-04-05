@@ -32,18 +32,10 @@ function Unanimous({ socket, room, isHost, playerName, roomId }) {
   };
 
   const submitAnswer = () => {
-    const updatedAnswers = { ...gameData.answers, [socket.id]: { name: playerName, text: answer } };
-    
-    // Check if everyone answered
-    const phase = Object.keys(updatedAnswers).length === room.players.length ? 'reveal' : 'input';
-
-    socket.emit('update_game_state', {
+    socket.emit('submit_unanimous_answer', {
       roomId,
-      payload: {
-        gameData: { ...gameData, answers: updatedAnswers, phase }
-      }
+      answer: { name: playerName, text: answer }
     });
-
     setMySubmission(true);
   };
 
@@ -170,14 +162,15 @@ function Unanimous({ socket, room, isHost, playerName, roomId }) {
   }
 
   if (gameData.phase === 'input') {
-    const answeredCount = Object.keys(gameData.answers).length;
+    const answeredCount = Object.keys(gameData.answers || {}).length;
+    const activeCount = room.players.filter(p => p.connected).length;
     
     if (mySubmission) {
       return (
         <div className="card center-content animate-pop" style={{ minHeight: '60vh' }}>
           <h2 style={{ marginBottom: '1rem', fontSize: '1.5rem' }}>全員の回答を待っています...</h2>
           <div style={{ fontSize: '3rem', fontWeight: 900, color: 'var(--primary)', marginBottom: '1rem' }}>
-            {room.players.length - answeredCount}人 待ち
+            {Math.max(0, activeCount - answeredCount)}人 待ち
           </div>
           
           <div style={{ marginTop: '2rem' }}>
