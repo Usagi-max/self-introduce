@@ -14,13 +14,11 @@ function Unanimous({ socket, room, isHost, playerName, roomId }) {
 
   const gameData = room.state.gameData || { question: '', answers: {}, phase: 'waiting', chooserIndex: 0, round: 1 };
 
-  // Reset local state if server starts a new round (question changes or answers clear)
+  // Reset local state if server starts a new round (question changes)
   useEffect(() => {
-    if (!gameData.answers[socket.id]) {
-      setMySubmission(false);
-      setAnswer('');
-    }
-  }, [gameData.question, gameData.answers, socket.id]);
+    setMySubmission(false);
+    setAnswer('');
+  }, [gameData.question]);
   
   const setupGame = () => {
     socket.emit('update_game_state', {
@@ -247,7 +245,13 @@ function Unanimous({ socket, room, isHost, playerName, roomId }) {
   }
 
   // phase === 'reveal'
-  const isUnanimous = Object.values(gameData.answers).every(a => a.text === Object.values(gameData.answers)[0].text);
+  const isUnanimous = Object.values(gameData.answers).length > 0 && Object.values(gameData.answers).every(a => a.text === Object.values(gameData.answers)[0].text);
+  
+  // スマホなどでもプレビューするための自動判定計算
+  const autoCounts = {};
+  Object.values(gameData.answers || {}).forEach(a => autoCounts[a.text] = (autoCounts[a.text] || 0) + 1);
+  let maxCount = 0;
+  Object.values(autoCounts).forEach(c => { if(c > maxCount) maxCount = c; });
 
   return (
     <div className="card center-content animate-pop">
@@ -266,7 +270,8 @@ function Unanimous({ socket, room, isHost, playerName, roomId }) {
 
       <div style={{ width: '100%' }}>
         {Object.entries(gameData.answers).map(([pid, ans]) => {
-          const isPenalized = gameData.scoredThisRound ? (gameData.finalPenalizedIds || []).includes(pid) : (evalMode && penalizedPlayerIds.includes(pid));
+          const isPenalizedAuto = (autoCounts[ans.text] !== maxCount || maxCount === 1) && !isUnanimous;
+          const isPenalized = gameData.scoredThisRound ? (gameData.finalPenalizedIds || []).includes(pid) : (evalMode ? penalizedPlayerIds.includes(pid) : isPenalizedAuto);
           
           return (
           <div key={pid} style={{ 
@@ -275,7 +280,7 @@ function Unanimous({ socket, room, isHost, playerName, roomId }) {
              padding: '1rem',
              borderBottom: '1px solid var(--gray-light)',
              alignItems: 'center',
-             backgroundColor: (gameData.scoredThisRound || evalMode) ? (isPenalized ? '#fff5f5' : '#f0fff4') : 'transparent'
+             backgroundColor: isPenalized ? '#fff5f5' : '#f0fff4'
           }}>
             <span style={{ fontWeight: 600 }}>
               {evalMode && !gameData.scoredThisRound && isHost && (
@@ -287,7 +292,7 @@ function Unanimous({ socket, room, isHost, playerName, roomId }) {
                 />
               )}
               {ans.name}
-              {(gameData.scoredThisRound || evalMode) && (
+              {(gameData.scoredThisRound || !isUnanimous) && (
                 <span style={{ fontSize: '0.75rem', marginLeft: '0.5rem', color: isPenalized ? '#E53E3E' : '#38A169' }}>
                   {isPenalized ? '(戦犯)' : '(セーフ)'}
                 </span>

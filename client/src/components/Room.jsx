@@ -12,8 +12,8 @@ const ProfileModal = ({ player, onClose }) => {
   if (!player || !player.metadata?.compatibilityProfile) return null;
   const p = player.metadata.compatibilityProfile;
   return (
-    <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center' }} onClick={onClose}>
-      <div style={{ backgroundColor: '#fff', padding: '2rem', borderRadius: '16px', maxWidth: '500px', width: '90%', maxHeight: '80vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+    <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '1rem' }} onClick={onClose}>
+      <div style={{ backgroundColor: '#fff', padding: '2rem', borderRadius: '16px', maxWidth: '500px', width: '100%', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
           <h3 style={{ margin: 0, color: 'var(--primary)' }}>{p.name} のプロフィール</h3>
           <button className="btn btn-secondary" style={{ width: 'auto', padding: '0.25rem 0.75rem' }} onClick={onClose}>✕</button>
@@ -299,7 +299,7 @@ function Room({ socket, room, isHost, playerName }) {
                       className="btn btn-secondary" 
                       style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', width: 'auto' }} 
                       onClick={() => setTransferSourcePlayer(p)}>
-                      🔄 引継ぎ
+                      🔄 記録を他のユーザーに引き継ぐ
                     </button>
                     {!p.isHost && (
                       <>
@@ -317,11 +317,11 @@ function Room({ socket, room, isHost, playerName }) {
                           className="btn btn-secondary" 
                           style={{ backgroundColor: '#FFebF0', color: '#E53E3E', border: 'none', padding: '0.25rem 0.5rem', fontSize: '0.75rem', width: 'auto' }} 
                           onClick={() => {
-                            if (window.confirm(`${p.name}をキックしますか？`)) {
+                            if (window.confirm(`${p.name}を離脱させますか？`)) {
                               socket.emit('kick_player', { roomId, targetSessionId: p.sessionId });
                             }
                           }}>
-                          キック
+                          離脱させる
                         </button>
                       </>
                     )}
@@ -348,6 +348,7 @@ function Room({ socket, room, isHost, playerName }) {
                 <option value="michael">マイケル（アメリカン・バディ / フランク）</option>
                 <option value="butler">セバスチャン（慇懃無礼 / 毒舌執事）</option>
                 <option value="gal">辛口ギャル（感情豊か / 若者言葉）</option>
+                <option value="onee">歌舞伎町のオネエ（愛ある毒舌 / オネエ言葉）</option>
               </select>
             </div>
 

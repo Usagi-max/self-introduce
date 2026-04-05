@@ -86,7 +86,7 @@ app.post('/api/ai/compatibility_additional', async (req, res) => {
 });
 
 app.post('/api/ai/submit_face', async (req, res) => {
-  const { roomId, socketId, playerName, imageData, promptId } = req.body;
+  const { roomId, socketId, playerName, imageData, promptId, persona } = req.body;
   
   // 1. Queue it in room state
   if (!rooms[roomId]) return res.status(404).json({ error: 'Room not found' });

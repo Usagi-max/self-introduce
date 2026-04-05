@@ -218,9 +218,19 @@ function AIFaceAnalysis({ socket, room, isHost, playerName, roomId }) {
 
         {!photoTaken ? (
           <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
-              <button className={`btn ${useCamera ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setUseCamera(true)}>カメラで撮影</button>
-              <button className={`btn ${!useCamera ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setUseCamera(false)}>画像をアップロード</button>
+            <div style={{ display: 'flex', marginBottom: '1.5rem', borderBottom: '2px solid var(--gray-light)', width: '100%', maxWidth: '400px' }}>
+              <div 
+                onClick={() => setUseCamera(true)}
+                style={{ flex: 1, textAlign: 'center', padding: '0.75rem', cursor: 'pointer', fontWeight: 'bold', borderBottom: useCamera ? '3px solid var(--primary)' : 'none', color: useCamera ? 'var(--primary)' : 'var(--gray-medium)', transition: 'all 0.2s' }}
+              >
+                🎥 カメラで撮影
+              </div>
+              <div 
+                onClick={() => setUseCamera(false)}
+                style={{ flex: 1, textAlign: 'center', padding: '0.75rem', cursor: 'pointer', fontWeight: 'bold', borderBottom: !useCamera ? '3px solid var(--primary)' : 'none', color: !useCamera ? 'var(--primary)' : 'var(--gray-medium)', transition: 'all 0.2s' }}
+              >
+                📁 画像アップロード
+              </div>
             </div>
 
             {useCamera ? (

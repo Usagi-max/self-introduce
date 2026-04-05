@@ -122,7 +122,18 @@ function AICompatibility({ socket, room, isHost, playerName, roomId }) {
         setSpinNames([playerA, playerB]);
         
         if (isHost) {
-          setTimeout(() => analyzePair(gameData.currentPair), 500);
+          if (window.__compatibilityBgPromise) {
+            socket.emit('update_game_state', { roomId, payload: { gameData: { ...gameData, phase: 'analyzing_pair' } } });
+            window.__compatibilityBgPromise.then(parsed => {
+              socket.emit('update_game_state', {
+                roomId,
+                payload: { gameData: { ...gameData, phase: 'reveal_pair', pairAnalysis: parsed } }
+              });
+            });
+            window.__compatibilityBgPromise = null;
+          } else {
+            analyzePair(gameData.currentPair);
+          }
         }
       }, 2500);
 
@@ -131,7 +142,7 @@ function AICompatibility({ socket, room, isHost, playerName, roomId }) {
         clearTimeout(timeoutId);
       };
     }
-  }, [gameData.phase, gameData.currentPair, players, isHost]);
+  }, [gameData.phase, gameData.currentPair, players, isHost, gameData]);
 
   const handleAddOpinion = () => setOpinions([...opinions, { relation: '', opinion: '' }]);
   const handleOpinionChange = (index, field, value) => {
@@ -141,8 +152,8 @@ function AICompatibility({ socket, room, isHost, playerName, roomId }) {
   };
   const handleRemoveOpinion = (index) => setOpinions(opinions.filter((_, i) => i !== index));
 
-  const handleSiblingsCountChange = (e) => {
-    let count = parseInt(e.target.value, 10);
+  const handleSiblingsCountChange = (val) => {
+    let count = parseInt(val, 10);
     if (isNaN(count) || count < 1) count = 1;
     if (count > 20) count = 20; 
     setSiblingsCount(count);
@@ -259,6 +270,26 @@ function AICompatibility({ socket, room, isHost, playerName, roomId }) {
         gameData: { ...gameData, phase: 'roulette_spinning', currentPair: selectedPair, evaluatedPairs: [...gameData.evaluatedPairs, pairStr] }
       }
     });
+
+    if (isHost) { // バックグラウンドで先読み開始
+      const p1 = gameData.results[selectedPair[0]];
+      const p2 = gameData.results[selectedPair[1]];
+      window.__compatibilityBgPromise = fetch(`${API_URL}/api/ai/compatibility_pair`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profiles: [p1, p2], persona: room.state.persona || 'michael' })
+      })
+      .then(res => res.json())
+      .then(aiContext => {
+        const messageText = aiContext.content[0].text;
+        let parsed = { theme: '謎の二人', compatibility: 0, details: messageText };
+        try { parsed = JSON.parse(messageText); } catch(e) {}
+        return parsed;
+      })
+      .catch(e => {
+        return { theme: '通信エラー', compatibility: 0, details: '通信またはAIエラーが発生しました。' };
+      });
+    }
   };
 
   const analyzePair = async (pairIds) => {
@@ -394,7 +425,7 @@ function AICompatibility({ socket, room, isHost, playerName, roomId }) {
                       {idx + 1}番目 {isMe && '(自分)'}
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      {['男性', '女性', 'その他'].map(t => (
+                      {['男性', '女性'].map(t => (
                          <button 
                             key={t}
                             className="btn btn-secondary"
@@ -577,6 +608,7 @@ function AICompatibility({ socket, room, isHost, playerName, roomId }) {
              <button className="btn btn-secondary" style={{ flex: 1, minWidth: '120px', padding: '0.5rem' }} onClick={() => reEvaluateWithPersona('michael')}>🇺🇸 マイケルに聞く</button>
              <button className="btn btn-secondary" style={{ flex: 1, minWidth: '120px', padding: '0.5rem' }} onClick={() => reEvaluateWithPersona('butler')}>🤵 セバスチャンに聞く</button>
              <button className="btn btn-secondary" style={{ flex: 1, minWidth: '120px', padding: '0.5rem' }} onClick={() => reEvaluateWithPersona('gal')}>💅 辛口ギャルに聞く</button>
+             <button className="btn btn-secondary" style={{ flex: 1, minWidth: '120px', padding: '0.5rem' }} onClick={() => reEvaluateWithPersona('onee')}>💋 歌舞伎町オネエ</button>
           </div>
 
           <button className="btn btn-primary" onClick={spinRoulette}>
