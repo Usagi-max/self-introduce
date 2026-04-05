@@ -151,7 +151,7 @@ function AICompatibility({ socket, room, isHost, playerName, roomId }) {
       await fetch(`${API_URL}/api/ai/submit_compatibility_profile`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roomId, socketId: socket.id, profile })
+        body: JSON.stringify({ roomId, socketId: socket.id, profile, persona: room.state.persona || 'michael' })
       });
     } catch (error) {
        console.error(error);
@@ -197,7 +197,7 @@ function AICompatibility({ socket, room, isHost, playerName, roomId }) {
       const response = await fetch(`${API_URL}/api/ai/compatibility_pair`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ profiles: [p1, p2] })
+        body: JSON.stringify({ profiles: [p1, p2], persona: room.state.persona || 'michael' })
       });
       const aiContext = await response.json();
       const messageText = aiContext.content[0].text;
@@ -227,7 +227,7 @@ function AICompatibility({ socket, room, isHost, playerName, roomId }) {
       await fetch(`${API_URL}/api/ai/compatibility_additional`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roomId, prompt: finalPrompt })
+        body: JSON.stringify({ roomId, prompt: finalPrompt, persona: room.state.persona || 'michael' })
       });
     } catch(e) { console.error(e); }
     setIsAdditionalLoading(false);
@@ -456,7 +456,7 @@ function AICompatibility({ socket, room, isHost, playerName, roomId }) {
         </div>
 
         <div style={{ backgroundColor: 'var(--white)', padding: '1.5rem', borderRadius: 'var(--radius-sm)', textAlign: 'left' }}>
-          <div style={{ fontSize: '1rem', fontWeight: 600, lineHeight: '1.8' }}>
+          <div className="markdown-body">
             <ReactMarkdown>{analysis.details || ''}</ReactMarkdown>
           </div>
         </div>
@@ -465,7 +465,7 @@ function AICompatibility({ socket, room, isHost, playerName, roomId }) {
       {gameData.additionalDiagnosis && (
         <div className="animate-pop" style={{ marginTop: '2.5rem', marginBottom: '1.5rem', border: '3px solid var(--primary)', borderRadius: 'var(--radius-md)', padding: '1.5rem', backgroundColor: '#f0fffd' }}>
            <h4 style={{ color: 'var(--primary)', marginBottom: '0.5rem', fontWeight: 900 }}>グループ追加診断: {gameData.additionalDiagnosis.prompt}</h4>
-           <div style={{ fontSize: '1rem', lineHeight: '1.8', color: 'var(--gray-dark)' }}>
+           <div className="markdown-body">
              <ReactMarkdown>{gameData.additionalDiagnosis.result}</ReactMarkdown>
            </div>
         </div>

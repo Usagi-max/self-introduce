@@ -40,9 +40,9 @@ app.post('/api/ai/submit_compatibility_profile', (req, res) => {
 });
 
 app.post('/api/ai/compatibility', async (req, res) => {
-  const { profiles } = req.body;
+  const { profiles, persona } = req.body;
   const promptText = JSON.stringify(profiles, null, 2);
-  const aiResponse = await generateMockResponse(promptText, 'compatibility');
+  const aiResponse = await generateMockResponse(promptText, 'compatibility', null, persona);
   
   if (aiResponse.content && aiResponse.content[0]) {
     aiResponse.content[0].text = cleanJsonString(aiResponse.content[0].text);
@@ -52,9 +52,9 @@ app.post('/api/ai/compatibility', async (req, res) => {
 });
 
 app.post('/api/ai/compatibility_pair', async (req, res) => {
-  const { profiles } = req.body;
+  const { profiles, persona } = req.body;
   const promptText = JSON.stringify(profiles, null, 2);
-  const aiResponse = await generateMockResponse(promptText, 'compatibility_pair');
+  const aiResponse = await generateMockResponse(promptText, 'compatibility_pair', null, persona);
 
   if (aiResponse.content && aiResponse.content[0]) {
     aiResponse.content[0].text = cleanJsonString(aiResponse.content[0].text);
@@ -99,7 +99,7 @@ app.post('/api/ai/submit_face', async (req, res) => {
 
   try {
     // 2. Await Gemini specifically mapping imageData
-    const aiResponse = await generateMockResponse(promptId, 'face_analysis', imageData);
+    const aiResponse = await generateMockResponse(promptId, 'face_analysis', imageData, persona);
     
     // 3. Mark Done
     if (rooms[roomId]) {
@@ -149,14 +149,14 @@ app.post('/api/ai/submit_face', async (req, res) => {
 });
 
 app.post('/api/ai/face_additional', async (req, res) => {
-  const { roomId, prompt } = req.body;
+  const { roomId, prompt, persona } = req.body;
   if (!rooms[roomId]) return res.status(404).json({error: 'Room not found'});
   
   const results = rooms[roomId].state.gameData.results;
   const contextData = results.map(r => ({ name: r.name, diagnosis: r.diagnosis, comment: r.comment }));
   const promptText = JSON.stringify({ context: contextData, userPrompt: prompt });
   
-  const aiResponse = await generateMockResponse(promptText, 'face_additional');
+  const aiResponse = await generateMockResponse(promptText, 'face_additional', null, persona);
   const messageText = aiResponse.content[0].text;
   
   if (rooms[roomId]) {

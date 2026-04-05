@@ -209,6 +209,19 @@ function Room({ socket, room, isHost, playerName }) {
             
             <RouletteSetup socket={socket} room={room} roomId={roomId} />
 
+            <div style={{ margin: '1.5rem 0', padding: '1rem', backgroundColor: 'var(--light)', borderRadius: '8px', border: '1px solid var(--gray-light)' }}>
+              <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.5rem', color: 'var(--gray-dark)' }}>🤖 AIの性格（人格）を選ぶ</label>
+              <select 
+                className="input-field" 
+                value={room.state.persona || 'michael'}
+                onChange={(e) => socket.emit('update_game_state', { roomId, payload: { persona: e.target.value } })}
+              >
+                <option value="michael">マイケル（アメリカン・バディ / フランク）</option>
+                <option value="butler">セバスチャン（慇懃無礼 / 毒舌執事）</option>
+                <option value="gal">辛口ギャル（感情豊か / 若者言葉）</option>
+              </select>
+            </div>
+
             <button className="btn btn-primary" style={{ marginBottom: '0.75rem' }} onClick={() => handleStartGame('roulette')}>
               自己紹介ルーレット
             </button>

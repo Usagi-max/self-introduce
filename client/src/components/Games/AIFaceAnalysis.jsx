@@ -131,7 +131,7 @@ function AIFaceAnalysis({ socket, room, isHost, playerName, roomId }) {
       await fetch(`${API_URL}/api/ai/submit_face`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roomId, socketId: socket.id, playerName, imageData, promptId: gameData.prompt })
+        body: JSON.stringify({ roomId, socketId: socket.id, playerName, imageData, promptId: gameData.prompt, persona: room.state.persona || 'michael' })
       });
     } catch (e) {
       console.error(e);
@@ -149,7 +149,7 @@ function AIFaceAnalysis({ socket, room, isHost, playerName, roomId }) {
       await fetch(`${API_URL}/api/ai/face_additional`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roomId, prompt: finalPrompt })
+        body: JSON.stringify({ roomId, prompt: finalPrompt, persona: room.state.persona || 'michael' })
       });
     } catch(e) { console.error(e); }
     setIsAdditionalLoading(false);
@@ -282,7 +282,7 @@ function AIFaceAnalysis({ socket, room, isHost, playerName, roomId }) {
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
           {safeResultsArray.map((res, i) => (
-            <div key={i} style={{ backgroundColor: 'var(--light)', borderRadius: 'var(--radius-md)', border: res.is_war_criminal ? '4px solid #E53E3E' : '2px solid var(--gray-light)', overflow: 'hidden', boxShadow: 'var(--shadow-sm)', position: 'relative' }}>
+            <div key={i} style={{ backgroundColor: res.is_war_criminal ? '#FFF5F5' : 'var(--light)', borderRadius: 'var(--radius-md)', border: res.is_war_criminal ? '2px solid #FED7D7' : '2px solid var(--gray-light)', overflow: 'hidden', boxShadow: 'var(--shadow-sm)', position: 'relative' }}>
               
               {res.is_war_criminal && (
                 <div style={{ position: 'absolute', top: '10px', right: '10px', backgroundColor: '#E53E3E', color: 'white', padding: '0.5rem 1rem', borderRadius: '100px', fontWeight: 900, fontSize: '1.2rem', transform: 'rotate(15deg)', zIndex: 10, boxShadow: '0 4px 8px rgba(0,0,0,0.3)' }}>
@@ -307,7 +307,7 @@ function AIFaceAnalysis({ socket, room, isHost, playerName, roomId }) {
                 {/* AIの真面目な診断結果 */}
                 <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#fff', borderRadius: '8px', borderLeft: '4px solid var(--primary)' }}>
                   <p style={{ fontSize: '0.8rem', fontWeight: 'bold', color: 'var(--primary)', margin: '0 0 0.5rem 0' }}>💡プロ診断士によるガチの人相分析</p>
-                  <div style={{ fontSize: '0.9rem', lineHeight: '1.6', color: 'var(--gray-dark)' }}>
+                  <div className="markdown-body">
                     <ReactMarkdown>{res.professional_comment || res.comment || '解析エラー'}</ReactMarkdown>
                   </div>
                 </div>
@@ -316,7 +316,7 @@ function AIFaceAnalysis({ socket, room, isHost, playerName, roomId }) {
                 {res.roast_comment && (
                   <div style={{ padding: '1rem', backgroundColor: '#fff5f5', borderRadius: '8px', border: '1px dashed #E53E3E' }}>
                     <p style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#E53E3E', margin: '0 0 0.5rem 0' }}>🔥お題に対してのツッコミ</p>
-                    <div style={{ fontSize: '0.9rem', lineHeight: '1.6', color: '#C53030', fontWeight: 'bold' }}>
+                    <div className="markdown-body">
                       <ReactMarkdown>{res.roast_comment}</ReactMarkdown>
                     </div>
                   </div>
@@ -331,7 +331,7 @@ function AIFaceAnalysis({ socket, room, isHost, playerName, roomId }) {
             <h4 style={{ color: 'var(--primary)', marginBottom: '0.5rem', fontWeight: 900 }}>
               追加診断: {gameData.additionalDiagnosis.prompt}
             </h4>
-            <div style={{ fontSize: '1rem', lineHeight: '1.8', color: 'var(--gray-dark)' }}>
+            <div className="markdown-body">
               <ReactMarkdown>{gameData.additionalDiagnosis.result}</ReactMarkdown>
             </div>
           </div>

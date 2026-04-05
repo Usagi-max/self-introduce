@@ -94,6 +94,7 @@ module.exports = {
       state: { 
         status: 'lobby', 
         game: null, 
+        persona: 'michael',
         rouletteTopics: ['出身地', '血液型', '好きな食べ物', 'マイブーム', '趣味', '休日の過ごし方'],
         penaltyTopics: ['恥ずかしい失敗談を告白する', 'AIに本音で相談する', 'AIに自分好みの異性のタイプを聞く', '全力で変顔を10秒キープ'] 
       },
