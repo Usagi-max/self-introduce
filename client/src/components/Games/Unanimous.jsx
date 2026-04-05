@@ -39,42 +39,80 @@ function Unanimous({ socket, room, isHost, playerName, roomId }) {
     setMySubmission(true);
   };
 
-  // Compute war criminal ranking for minority
-  useEffect(() => {
-    if (isHost && gameData.phase === 'reveal' && !gameData.scoredThisRound) {
+  // Host evaluation states
+  const [evalMode, setEvalMode] = useState(false);
+  const [safePlayerIds, setSafePlayerIds] = useState([]);
+
+  // Compute default strict minority if host opens evalMode
+  const initiateEvalMode = () => {
+    const allAnswers = Object.values(gameData.answers).map(a => a.text);
+    const counts = {};
+    allAnswers.forEach(a => counts[a] = (counts[a] || 0) + 1);
+    
+    let maxCount = 0;
+    Object.values(counts).forEach(c => { if(c > maxCount) maxCount = c; });
+    
+    const safeIds = [];
+    Object.entries(gameData.answers).forEach(([pid, ans]) => {
+      // safe if they belong to the majority answer
+      if (counts[ans.text] === maxCount && maxCount > 1) {
+         safeIds.push(pid);
+      }
+    });
+    // If it was 1-1-1 everyone is wrong (safeIds empty), else safeIds has the majority.
+    // However if everyone matched completely, safeIds has everyone.
+    setSafePlayerIds(safeIds);
+    setEvalMode(true);
+  };
+
+  const toggleSafePlayer = (pid) => {
+    if (safePlayerIds.includes(pid)) {
+      setSafePlayerIds(safePlayerIds.filter(id => id !== pid));
+    } else {
+      setSafePlayerIds([...safePlayerIds, pid]);
+    }
+  };
+
+  const confirmScores = (isStrictAuto = false) => {
+    let idsToSave = safePlayerIds;
+    
+    if (isStrictAuto) {
+      // Recalculate auto just to be sure
       const allAnswers = Object.values(gameData.answers).map(a => a.text);
       const counts = {};
       allAnswers.forEach(a => counts[a] = (counts[a] || 0) + 1);
-      
       let maxCount = 0;
       Object.values(counts).forEach(c => { if(c > maxCount) maxCount = c; });
-      
-      const minorityIds = [];
+      idsToSave = [];
       Object.entries(gameData.answers).forEach(([pid, ans]) => {
-        // Minority is defined as having picked an answer that is NOT the most frequent answer (or if it's a completely scattered 1-1-1 tie, everyone is minority)
-        if (counts[ans.text] < maxCount || maxCount === 1) {
-           minorityIds.push(pid);
-        }
+        if (counts[ans.text] === maxCount && maxCount > 1) idsToSave.push(pid);
       });
-      
-      minorityIds.forEach(pid => {
-        const p = room.players.find(x => x.id === pid);
-        if (p) {
-          socket.emit('update_player_metadata', {
-            roomId,
-            playerId: pid,
-            payload: { penalties: (p.metadata?.penalties || 0) + 1 }
-          });
-        }
-      });
-
-      // Mark scored so we don't spam emits
-      socket.emit('update_game_state', {
-        roomId,
-        payload: { gameData: { ...gameData, scoredThisRound: true } }
-      });
+      // if literally true unanimous, everyone is safe.
+      const isUnanimous = Object.values(gameData.answers).every(a => a.text === Object.values(gameData.answers)[0].text);
+      if (isUnanimous) idsToSave = Object.keys(gameData.answers);
     }
-  }, [gameData.phase, isHost, gameData.scoredThisRound]);
+    
+    const minorityIds = Object.keys(gameData.answers).filter(pid => !idsToSave.includes(pid));
+    
+    minorityIds.forEach(pid => {
+      const p = room.players.find(x => x.id === pid);
+      if (p) {
+        let currentBg = p.metadata?.penaltiesByGame || { unanimous: 0, face_analysis: 0 };
+        currentBg.unanimous = (currentBg.unanimous || 0) + 1;
+        socket.emit('update_player_metadata', {
+          roomId,
+          playerId: pid,
+          payload: { penaltiesByGame: currentBg }
+        });
+      }
+    });
+
+    socket.emit('update_game_state', {
+      roomId,
+      payload: { gameData: { ...gameData, scoredThisRound: true } }
+    });
+    setEvalMode(false);
+  };
 
   const nextRound = () => {
     setMySubmission(false);
@@ -229,21 +267,63 @@ function Unanimous({ socket, room, isHost, playerName, roomId }) {
       </div>
 
       <div style={{ width: '100%' }}>
-        {Object.values(gameData.answers).map((ans, i) => (
-          <div key={i} style={{ 
-            display: 'flex', 
-            justifyContent: 'space-between',
-            padding: '1rem',
-            borderBottom: '1px solid var(--gray-light)',
-            alignItems: 'center'
+        {Object.entries(gameData.answers).map(([pid, ans]) => (
+          <div key={pid} style={{ 
+             display: 'flex', 
+             justifyContent: 'space-between',
+             padding: '1rem',
+             borderBottom: '1px solid var(--gray-light)',
+             alignItems: 'center',
+             backgroundColor: (gameData.scoredThisRound ? false : evalMode) ? (safePlayerIds.includes(pid) ? '#f0fff4' : '#fff5f5') : 'transparent'
           }}>
-            <span style={{ fontWeight: 600 }}>{ans.name}</span>
+            <span style={{ fontWeight: 600 }}>
+              {evalMode && !gameData.scoredThisRound && isHost && (
+                <input 
+                  type="checkbox" 
+                  checked={safePlayerIds.includes(pid)}
+                  onChange={() => toggleSafePlayer(pid)}
+                  style={{ marginRight: '0.75rem', transform: 'scale(1.5)' }}
+                />
+              )}
+              {ans.name}
+              {(gameData.scoredThisRound ? false : evalMode) && (
+                <span style={{ fontSize: '0.75rem', marginLeft: '0.5rem', color: safePlayerIds.includes(pid) ? '#38A169' : '#E53E3E' }}>
+                  {safePlayerIds.includes(pid) ? '(セーフ)' : '(戦犯)'}
+                </span>
+              )}
+            </span>
             <span style={{ fontSize: '1.25rem', fontWeight: 800 }}>{ans.text}</span>
           </div>
         ))}
       </div>
 
-      {isHost && (
+      {isHost && !gameData.scoredThisRound && (
+        <div style={{ marginTop: '2rem', width: '100%' }}>
+          {!evalMode ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <p style={{ color: 'var(--gray-dark)', fontWeight: 'bold' }}>結果の判定方法を選んでください</p>
+              <button className="btn btn-primary" onClick={() => confirmScores(true)}>
+                自動判定（完全一致で評価）で確定する
+              </button>
+              <button className="btn btn-secondary" onClick={initiateEvalMode}>
+                手動で判定を修正する（表記ゆれ等を許可）
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', border: '1px solid var(--primary)', padding: '1rem', borderRadius: '8px', backgroundColor: '#f0fffd' }}>
+              <p style={{ color: 'var(--primary)', fontWeight: 'bold' }}>セーフ（一致）とする人を上のリストでチェックしてください。<br/><span style={{fontSize: '0.875rem', color: '#E53E3E'}}>※ チェックが入っていない人が全員戦犯になります</span></p>
+              <button className="btn btn-primary" onClick={() => confirmScores(false)}>
+                チェックした内容で結果確定
+              </button>
+              <button className="btn btn-secondary" onClick={() => setEvalMode(false)}>
+                選び直す（キャンセル）
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {isHost && gameData.scoredThisRound && (
         <button className="btn btn-primary" style={{ marginTop: '2rem' }} onClick={nextRound}>
           次のお題へ（出題者を交代）
         </button>

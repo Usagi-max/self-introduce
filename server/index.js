@@ -102,8 +102,8 @@ app.post('/api/ai/submit_face', async (req, res) => {
     const aiResponse = await generateMockResponse(promptId, 'face_analysis', imageData, persona);
     
     // 3. Mark Done
-    if (rooms[roomId]) {
-      existingIndex = rooms[roomId].state.gameData.results.findIndex(r => r.id === socketId);
+    if (rooms[roomId] && rooms[roomId].state.gameData && rooms[roomId].state.gameData.results) {
+      existingIndex = rooms[roomId].state.gameData.results.findIndex(r => r.name === playerName);
       if (existingIndex !== -1) {
         let parsed = { diagnosis: '？な顔', professional_comment: '解析エラーが発生しました。', roast_comment: '', is_war_criminal: false };
         try { 
@@ -121,17 +121,18 @@ app.post('/api/ai/submit_face', async (req, res) => {
         rooms[roomId].state.gameData.results[existingIndex].comment = parsed.professional_comment; // Fallback compat
 
         if (parsed.is_war_criminal) {
-          const p = rooms[roomId].players.find(x => x.id === socketId);
+          const p = rooms[roomId].players.find(x => x.name === playerName);
           if (p) {
-            p.metadata = { ...p.metadata, penalties: (p.metadata?.penalties || 0) + 1 };
+            if (!p.metadata.penaltiesByGame) p.metadata.penaltiesByGame = { unanimous: 0, face_analysis: 0 };
+            p.metadata.penaltiesByGame.face_analysis = (p.metadata.penaltiesByGame.face_analysis || 0) + 1;
           }
         }
         
         // Transition to reveal if everyone is done
         const activeConnected = rooms[roomId].players.filter(p => p.connected);
         const allDone = activeConnected.length > 0 && activeConnected.every(p => {
-           // wait, socket.id vs p.id issue again? Yes, find by p.id
-           const r = rooms[roomId].state.gameData.results.find(x => x.id === p.id);
+           // Lookup by name instead of volatile socket array id
+           const r = rooms[roomId].state.gameData.results.find(x => x.name === p.name);
            return r && r.status === 'done';
         });
         

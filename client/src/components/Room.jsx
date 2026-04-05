@@ -8,12 +8,57 @@ import AIFaceAnalysis from './Games/AIFaceAnalysis';
 import Penalty from './Penalty/Penalty';
 import RouletteSetup from './Games/RouletteSetup';
 
+const ProfileModal = ({ player, onClose }) => {
+  if (!player || !player.metadata?.compatibilityProfile) return null;
+  const p = player.metadata.compatibilityProfile;
+  return (
+    <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center' }} onClick={onClose}>
+      <div style={{ backgroundColor: '#fff', padding: '2rem', borderRadius: '16px', maxWidth: '500px', width: '90%', maxHeight: '80vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <h3 style={{ margin: 0, color: 'var(--primary)' }}>{p.name} のプロフィール</h3>
+          <button className="btn btn-secondary" style={{ width: 'auto', padding: '0.25rem 0.75rem' }} onClick={onClose}>✕</button>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '1rem' }}>
+          <p><strong>血液型:</strong> {p.bloodType}</p>
+          <p><strong>星座:</strong> {p.zodiac}</p>
+          <p><strong>MBTI:</strong> {p.mbti}</p>
+          <p><strong>兄弟:</strong> {p.siblingsCount}人中 {p.birthOrder}番目</p>
+        </div>
+        {p.siblingGenders && p.siblingGenders.length > 0 && (
+          <div style={{ marginBottom: '1rem' }}>
+            <p><strong>兄弟構成:</strong> {p.siblingGenders.join(' / ')}</p>
+          </div>
+        )}
+        {p.hasCloseSibling && (
+          <div style={{ marginBottom: '1rem', backgroundColor: '#f0fff4', padding: '0.5rem', borderRadius: '8px' }}>
+            <p><strong>仲良しの兄弟:</strong> {p.closeSiblingRank}番目</p>
+            {p.closeSiblingReason && <p style={{ fontSize: '0.875rem' }}>「{p.closeSiblingReason}」</p>}
+          </div>
+        )}
+        {p.opinions && p.opinions.length > 0 && (
+          <div>
+            <p><strong>他人からの評価:</strong></p>
+            <ul style={{ paddingLeft: '1.5rem', margin: 0 }}>
+              {p.opinions.map((op, i) => (
+                <li key={i} style={{ fontSize: '0.9rem' }}>
+                  <span style={{ color: 'var(--gray-medium)' }}>{op.relation}より:</span> {op.opinion}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 function Room({ socket, room, isHost, playerName }) {
   const { roomId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   const [copiedLink, setCopiedLink] = useState(false);
   const [mustSetup, setMustSetup] = useState(location.state?.isNew || false);
+  const [selectedProfilePlayer, setSelectedProfilePlayer] = useState(null);
 
   // If page refershed and context lost, return home
   useEffect(() => {
@@ -110,12 +155,22 @@ function Room({ socket, room, isHost, playerName }) {
         </div>
 
         {/* Global Scoreboard / War Criminal Ranking */}
-        {room.players.some(p => (p.metadata?.penalties || 0) > 0) && (
+        {room.players.some(p => {
+          const bg = p.metadata?.penaltiesByGame || {};
+          return Object.values(bg).reduce((a, b) => a + b, 0) > 0 || (p.metadata?.penalties || 0) > 0;
+        }) && (
           <div className="card animate-pop" style={{ marginBottom: '1.5rem', border: '3px solid #E53E3E', backgroundColor: '#FFF5F5' }}>
             <h3 style={{ marginBottom: '1rem', color: '#E53E3E', textAlign: 'center' }}>🔥 総合 戦犯ランキング 🔥</h3>
             <ul style={{ listStyle: 'none', padding: 0 }}>
               {[...room.players]
-                .sort((a, b) => (b.metadata?.penalties || 0) - (a.metadata?.penalties || 0))
+                .map(p => {
+                  const bg = p.metadata?.penaltiesByGame || {};
+                  const legacyScore = p.metadata?.penalties || 0;
+                  const total = Object.values(bg).reduce((a, b) => a + b, 0) + legacyScore;
+                  return { ...p, totalPenalties: total, unanimousCnt: bg.unanimous || 0, faceCnt: bg.face_analysis || 0 };
+                })
+                .filter(p => p.totalPenalties > 0)
+                .sort((a, b) => b.totalPenalties - a.totalPenalties)
                 .map((p, i) => (
                 <li key={p.id} style={{ 
                   display: 'flex', justifyContent: 'space-between', padding: '0.75rem 1rem', 
@@ -126,8 +181,13 @@ function Room({ socket, room, isHost, playerName }) {
                   fontSize: i === 0 ? '1.2rem' : '1rem',
                   color: i === 0 ? '#C53030' : 'var(--dark)'
                 }}>
-                  <span>{i + 1}位 {i === 0 && '💀 (最大の戦犯)'} {p.name}</span>
-                  <span style={{ color: '#E53E3E' }}>罰ゲーム {p.metadata?.penalties || 0}回</span>
+                  <span>{i + 1}位 {i === 0 && '💀 '} {p.name}</span>
+                  <div style={{ textAlign: 'right' }}>
+                    <span style={{ color: '#E53E3E' }}>戦犯 {p.totalPenalties}回</span>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--gray-medium)' }}>
+                      (全員一致: {p.unanimousCnt}回 / 人相: {p.faceCnt}回)
+                    </div>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -149,7 +209,10 @@ function Room({ socket, room, isHost, playerName }) {
                   fontWeight: 600
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center' }}>
+                <div 
+                  style={{ display: 'flex', alignItems: 'center', cursor: p.metadata?.compatibilityProfile ? 'pointer' : 'default' }}
+                  onClick={() => p.metadata?.compatibilityProfile && setSelectedProfilePlayer(p)}
+                >
                   <div style={{
                     width: '32px',
                     height: '32px',
@@ -168,6 +231,7 @@ function Room({ socket, room, isHost, playerName }) {
                   <div style={{ display: 'flex', flexDirection: 'column' }}>
                     <span>
                       {p.name}
+                      {p.metadata?.compatibilityProfile && <span style={{fontSize: '0.75rem', color:'var(--secondary)', marginLeft: '0.5rem'}}>(📝プロフィール有)</span>}
                       {p.isHost && <span style={{fontSize: '0.75rem', color:'var(--primary)', marginLeft: '0.5rem'}}>(ホスト)</span>}
                       {!p.connected && <span style={{fontSize: '0.75rem', color:'var(--gray-medium)', marginLeft: '0.5rem'}}>(接続切れ)</span>}
                     </span>
@@ -244,6 +308,10 @@ function Room({ socket, room, isHost, playerName }) {
           <div className="card" style={{ textAlign: 'center', padding: '2rem 1rem' }}>
             <p style={{ color: 'var(--gray-medium)', fontWeight: 600 }}>ホストがゲームを開始するのを待っています...</p>
           </div>
+        )}
+
+        {selectedProfilePlayer && (
+          <ProfileModal player={selectedProfilePlayer} onClose={() => setSelectedProfilePlayer(null)} />
         )}
       </div>
     );

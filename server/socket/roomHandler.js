@@ -88,6 +88,7 @@ module.exports = {
         connected: true,
         metadata: {
           points: 0,
+          penaltiesByGame: { unanimous: 0, face_analysis: 0 },
           characterStrategyLevel: null
         }
       }],
@@ -122,7 +123,7 @@ module.exports = {
           name: playerName, 
           isHost: false,
           connected: true,
-          metadata: { points: 0, characterStrategyLevel: null } 
+          metadata: { points: 0, penaltiesByGame: { unanimous: 0, face_analysis: 0 }, characterStrategyLevel: null } 
         });
     }
 

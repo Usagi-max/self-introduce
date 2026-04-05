@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
+import html2canvas from 'html2canvas';
 
 const API_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001').replace(/\/$/, "");
 
@@ -46,6 +47,25 @@ function AICompatibility({ socket, room, isHost, playerName, roomId }) {
   const [selectedPreset, setSelectedPreset] = useState(ADDITIONAL_DIAGNOSIS_PRESETS[0]);
   const [additionalPrompt, setAdditionalPrompt] = useState('');
   const [isAdditionalLoading, setIsAdditionalLoading] = useState(false);
+
+  const resultRef = useRef(null);
+  
+  useEffect(() => {
+    const me = room.players.find(p => p.id === socket.id);
+    if (me && me.metadata?.compatibilityProfile) {
+      const p = me.metadata.compatibilityProfile;
+      setBloodType(p.bloodType || '不明');
+      setMbti(p.mbti || '不明');
+      setSiblingsCount(p.siblingsCount || 1);
+      setBirthOrder(p.birthOrder || 1);
+      setSiblingGenders(p.siblingGenders || ['不明']);
+      setHasCloseSibling(p.hasCloseSibling || false);
+      setCloseSiblingRank(p.closeSiblingRank || '1');
+      setCloseSiblingReason(p.closeSiblingReason || '');
+      setZodiac(p.zodiac || '不明');
+      setOpinions(p.opinions || [{ relation: '', opinion: '' }]);
+    }
+  }, [socket.id, room.players]);
 
   const gameData = room.state.gameData || { 
     phase: 'setup', 
@@ -147,6 +167,12 @@ function AICompatibility({ socket, room, isHost, playerName, roomId }) {
       zodiac, opinions: filteredOpinions 
     };
 
+    socket.emit('update_player_metadata', {
+      roomId,
+      playerId: socket.id,
+      payload: { compatibilityProfile: profile }
+    });
+
     try {
       await fetch(`${API_URL}/api/ai/submit_compatibility_profile`, {
         method: 'POST',
@@ -231,6 +257,21 @@ function AICompatibility({ socket, room, isHost, playerName, roomId }) {
       });
     } catch(e) { console.error(e); }
     setIsAdditionalLoading(false);
+  };
+
+  const handleSaveImage = async () => {
+    if (resultRef.current) {
+      try {
+        const canvas = await html2canvas(resultRef.current, { useCORS: true, backgroundColor: '#fff' });
+        const dataUrl = canvas.toDataURL('image/png');
+        const link = document.createElement('a');
+        link.download = `compatibility_${new Date().getTime()}.png`;
+        link.href = dataUrl;
+        link.click();
+      } catch (err) {
+        console.error("画像保存エラー", err);
+      }
+    }
   };
 
   if (gameData.phase === 'setup') {
@@ -418,12 +459,12 @@ function AICompatibility({ socket, room, isHost, playerName, roomId }) {
           {gameData.phase === 'roulette_spinning' ? '運命のペアを選択中...' : 'AIが相性をディープに診断中...'}
         </h3>
         
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2rem', margin: '2rem 0' }}>
-          <div style={{ fontSize: '2.5rem', fontWeight: 900, color: 'var(--primary)', padding: '1.5rem', borderRadius: '12px', border: '4px solid var(--primary)', minWidth: '150px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem', flexWrap: 'wrap', margin: '2rem 0' }}>
+          <div style={{ fontSize: '1.5rem', fontWeight: 900, color: 'var(--primary)', padding: '1rem', borderRadius: '12px', border: '4px solid var(--primary)', minWidth: '100px', wordBreak: 'break-word', textAlign: 'center' }}>
             {spinNames[0]}
           </div>
           <div style={{ fontSize: '2rem', color: '#E53E3E', fontWeight: 'bold' }}>×</div>
-          <div style={{ fontSize: '2.5rem', fontWeight: 900, color: 'var(--primary)', padding: '1.5rem', borderRadius: '12px', border: '4px solid var(--primary)', minWidth: '150px' }}>
+          <div style={{ fontSize: '1.5rem', fontWeight: 900, color: 'var(--primary)', padding: '1rem', borderRadius: '12px', border: '4px solid var(--primary)', minWidth: '100px', wordBreak: 'break-word', textAlign: 'center' }}>
             {spinNames[1]}
           </div>
         </div>
@@ -440,11 +481,12 @@ function AICompatibility({ socket, room, isHost, playerName, roomId }) {
 
   return (
     <div className="card animate-pop" style={{ padding: '1.5rem 1rem' }}>
-      <h3 style={{ color: 'var(--gray-medium)', textAlign: 'center', marginBottom: '1.5rem' }}>
-        {playerA} × {playerB} AI相性診断結果
-      </h3>
+      <div ref={resultRef} style={{ padding: '1rem', backgroundColor: '#fff' }}>
+        <h3 style={{ color: 'var(--gray-medium)', textAlign: 'center', marginBottom: '1.5rem' }}>
+          {playerA} × {playerB}<br/>AI相性診断結果
+        </h3>
 
-      <div style={{ backgroundColor: 'var(--light)', borderRadius: 'var(--radius-md)', padding: '1.5rem', textAlign: 'center', border: '4px solid #E53E3E', marginBottom: '1.5rem' }}>
+        <div style={{ backgroundColor: 'var(--light)', borderRadius: 'var(--radius-md)', padding: '1.5rem', textAlign: 'center', border: '4px solid #E53E3E', marginBottom: '1.5rem' }}>
         <p style={{ fontWeight: 800, color: 'var(--gray-medium)', marginBottom: '0.5rem' }}>二人のテーマ</p>
         <h2 style={{ fontSize: '2rem', color: '#E53E3E', marginBottom: '1.5rem' }}>「{analysis.theme || '不明'}」</h2>
         
@@ -470,6 +512,13 @@ function AICompatibility({ socket, room, isHost, playerName, roomId }) {
            </div>
         </div>
       )}
+      </div>
+
+      <div style={{ textAlign: 'center', margin: '1rem 0' }}>
+        <button className="btn btn-secondary" onClick={handleSaveImage} style={{ width: 'auto', fontSize: '0.875rem' }}>
+          📸 結果を画像として端末に保存
+        </button>
+      </div>
 
       {isHost && (
         <>
@@ -488,7 +537,7 @@ function AICompatibility({ socket, room, isHost, playerName, roomId }) {
            </button>
         </div>
 
-        <div style={{ marginTop: '1rem', display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+        <div style={{ marginTop: '1rem', display: 'flex', gap: '1rem', flexDirection: 'column' }}>
           <button className="btn btn-primary" onClick={spinRoulette}>
             次のペアを診断する 🎯
           </button>
