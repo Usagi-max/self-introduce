@@ -12,6 +12,14 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: '50mb' })); // allow larger payload for base64 images
 
+function cleanJsonString(str) {
+  try {
+    return str.replace(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/ig, '$1').trim();
+  } catch (e) {
+    return str;
+  }
+}
+
 app.post('/api/ai/submit_compatibility_profile', (req, res) => {
   const { roomId, socketId, profile } = req.body;
   if (!rooms[roomId]) return res.status(404).json({error: 'Room not found'});
@@ -34,6 +42,11 @@ app.post('/api/ai/compatibility', async (req, res) => {
   const { profiles } = req.body;
   const promptText = JSON.stringify(profiles, null, 2);
   const aiResponse = await generateMockResponse(promptText, 'compatibility');
+  
+  if (aiResponse.content && aiResponse.content[0]) {
+    aiResponse.content[0].text = cleanJsonString(aiResponse.content[0].text);
+  }
+  
   res.json(aiResponse);
 });
 
@@ -41,6 +54,11 @@ app.post('/api/ai/compatibility_pair', async (req, res) => {
   const { profiles } = req.body;
   const promptText = JSON.stringify(profiles, null, 2);
   const aiResponse = await generateMockResponse(promptText, 'compatibility_pair');
+
+  if (aiResponse.content && aiResponse.content[0]) {
+    aiResponse.content[0].text = cleanJsonString(aiResponse.content[0].text);
+  }
+
   res.json(aiResponse);
 });
 
@@ -86,12 +104,27 @@ app.post('/api/ai/submit_face', async (req, res) => {
     if (rooms[roomId]) {
       existingIndex = rooms[roomId].state.gameData.results.findIndex(r => r.id === socketId);
       if (existingIndex !== -1) {
-        let parsed = { diagnosis: '？な顔', comment: '解析エラーが発生しました。' };
-        try { parsed = JSON.parse(aiResponse.content[0].text); } catch(e) { parsed.comment = aiResponse.content[0].text || "エラー" }
+        let parsed = { diagnosis: '？な顔', professional_comment: '解析エラーが発生しました。', roast_comment: '', is_war_criminal: false };
+        try { 
+          const cleanText = cleanJsonString(aiResponse.content[0].text);
+          parsed = JSON.parse(cleanText); 
+        } catch(e) { 
+          parsed.professional_comment = aiResponse.content[0].text || "エラー" 
+        }
         
         rooms[roomId].state.gameData.results[existingIndex].status = 'done';
-        rooms[roomId].state.gameData.results[existingIndex].diagnosis = parsed.diagnosis;
-        rooms[roomId].state.gameData.results[existingIndex].comment = parsed.comment;
+        rooms[roomId].state.gameData.results[existingIndex].diagnosis = parsed.diagnosis || "？な顔";
+        rooms[roomId].state.gameData.results[existingIndex].professional_comment = parsed.professional_comment || "";
+        rooms[roomId].state.gameData.results[existingIndex].roast_comment = parsed.roast_comment || "";
+        rooms[roomId].state.gameData.results[existingIndex].is_war_criminal = parsed.is_war_criminal || false;
+        rooms[roomId].state.gameData.results[existingIndex].comment = parsed.professional_comment; // Fallback compat
+
+        if (parsed.is_war_criminal) {
+          const p = rooms[roomId].players.find(x => x.id === socketId);
+          if (p) {
+            p.metadata = { ...p.metadata, penalties: (p.metadata?.penalties || 0) + 1 };
+          }
+        }
         
         // Transition to reveal if everyone is done
         const allDone = rooms[roomId].players.length > 0 && rooms[roomId].players.every(p => {

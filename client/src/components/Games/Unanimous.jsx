@@ -47,6 +47,43 @@ function Unanimous({ socket, room, isHost, playerName, roomId }) {
     setMySubmission(true);
   };
 
+  // Compute war criminal ranking for minority
+  useEffect(() => {
+    if (isHost && gameData.phase === 'reveal' && !gameData.scoredThisRound) {
+      const allAnswers = Object.values(gameData.answers).map(a => a.text);
+      const counts = {};
+      allAnswers.forEach(a => counts[a] = (counts[a] || 0) + 1);
+      
+      let maxCount = 0;
+      Object.values(counts).forEach(c => { if(c > maxCount) maxCount = c; });
+      
+      const minorityIds = [];
+      Object.entries(gameData.answers).forEach(([pid, ans]) => {
+        // Minority is defined as having picked an answer that is NOT the most frequent answer (or if it's a completely scattered 1-1-1 tie, everyone is minority)
+        if (counts[ans.text] < maxCount || maxCount === 1) {
+           minorityIds.push(pid);
+        }
+      });
+      
+      minorityIds.forEach(pid => {
+        const p = room.players.find(x => x.id === pid);
+        if (p) {
+          socket.emit('update_player_metadata', {
+            roomId,
+            playerId: pid,
+            payload: { penalties: (p.metadata?.penalties || 0) + 1 }
+          });
+        }
+      });
+
+      // Mark scored so we don't spam emits
+      socket.emit('update_game_state', {
+        roomId,
+        payload: { gameData: { ...gameData, scoredThisRound: true } }
+      });
+    }
+  }, [gameData.phase, isHost, gameData.scoredThisRound]);
+
   const nextRound = () => {
     setMySubmission(false);
     setAnswer('');
@@ -62,7 +99,7 @@ function Unanimous({ socket, room, isHost, playerName, roomId }) {
     socket.emit('update_game_state', {
       roomId,
       payload: {
-        gameData: { ...gameData, question: '', answers: {}, phase: 'prompt_selection', chooserIndex: newIdx, round: newRound }
+        gameData: { ...gameData, question: '', answers: {}, phase: 'prompt_selection', chooserIndex: newIdx, round: newRound, scoredThisRound: false }
       }
     });
   };

@@ -5,11 +5,13 @@ import ReactMarkdown from 'react-markdown';
 const API_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001').replace(/\/$/, "");
 
 const FACE_PROMPTS = [
-  '悪そうな顔',
-  'ピュアそうな顔・優しそうな顔',
-  '厳しそうな顔',
-  'めちゃくちゃ頭よさそうな顔',
-  '悟りを開いた顔'
+  '社長になりそうな人',
+  '絶対に秘密は守らない裏切り者',
+  '休日はずっと寝てそうな人',
+  '実は裏で世界を牛耳っている黒幕',
+  '初対面でめちゃくちゃ良い人そうだけど、後で面倒くさい人',
+  '何を聞いても「へぇー」としか言わない興味ない人',
+  '飲み会で一番最後まで残って語り続ける人'
 ];
 
 const ADDITIONAL_DIAGNOSIS_PRESETS = [
@@ -208,7 +210,7 @@ function AIFaceAnalysis({ socket, room, isHost, playerName, roomId }) {
         <h3 style={{ color: 'var(--gray-medium)', textAlign: 'center' }}>AI 人相診断ゲーム</h3>
         
         <div style={{ margin: '1.5rem 0', padding: '1.5rem', backgroundColor: 'var(--light)', borderRadius: 'var(--radius-md)' }}>
-          <p style={{ fontWeight: 600, color: 'var(--gray-medium)', marginBottom: '0.5rem' }}>以下のお題の顔をして、写真を撮れ！</p>
+          <p style={{ fontWeight: 'bold', color: 'var(--gray-medium)', marginBottom: '0.5rem' }}>以下のお題の顔をして、AIに人相判定させろ！</p>
           <h2 style={{ fontSize: '2rem', color: 'var(--primary)', textAlign: 'center' }}>
             「{gameData.prompt}」
           </h2>
@@ -280,20 +282,45 @@ function AIFaceAnalysis({ socket, room, isHost, playerName, roomId }) {
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
           {safeResultsArray.map((res, i) => (
-            <div key={i} style={{ backgroundColor: 'var(--light)', borderRadius: 'var(--radius-md)', border: '2px solid var(--gray-light)', overflow: 'hidden', boxShadow: 'var(--shadow-sm)' }}>
+            <div key={i} style={{ backgroundColor: 'var(--light)', borderRadius: 'var(--radius-md)', border: res.is_war_criminal ? '4px solid #E53E3E' : '2px solid var(--gray-light)', overflow: 'hidden', boxShadow: 'var(--shadow-sm)', position: 'relative' }}>
+              
+              {res.is_war_criminal && (
+                <div style={{ position: 'absolute', top: '10px', right: '10px', backgroundColor: '#E53E3E', color: 'white', padding: '0.5rem 1rem', borderRadius: '100px', fontWeight: 900, fontSize: '1.2rem', transform: 'rotate(15deg)', zIndex: 10, boxShadow: '0 4px 8px rgba(0,0,0,0.3)' }}>
+                  💀お題はき違え戦犯！
+                </div>
+              )}
+
               <div style={{ width: '100%', height: '220px', backgroundColor: '#333', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                 <img src={res.imageData} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} alt="face" />
               </div>
+              
               <div style={{ padding: '1.5rem' }}>
                 <div style={{ fontWeight: 800, marginBottom: '0.5rem', fontSize: '1.1rem', color: 'var(--gray-dark)' }}>{res.name} の人相診断</div>
+                
+                {/* 診断名 */}
                 <div style={{ marginBottom: '1rem' }}>
-                  <span style={{ fontSize: '1.5rem', fontWeight: 900, color: '#E53E3E', borderBottom: '3px solid #E53E3E', paddingBottom: '0.2rem' }}>
-                    {res.diagnosis}
+                  <span style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--primary)', borderBottom: '3px solid var(--primary)', paddingBottom: '0.2rem' }}>
+                    {res.diagnosis || "診断不可"}
                   </span>
                 </div>
-                <div style={{ fontSize: '0.95rem', fontWeight: 600, lineHeight: '1.6' }}>
-                  <ReactMarkdown>{res.comment}</ReactMarkdown>
+                
+                {/* AIの真面目な診断結果 */}
+                <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#fff', borderRadius: '8px', borderLeft: '4px solid var(--primary)' }}>
+                  <p style={{ fontSize: '0.8rem', fontWeight: 'bold', color: 'var(--primary)', margin: '0 0 0.5rem 0' }}>💡プロ診断士によるガチの人相分析</p>
+                  <div style={{ fontSize: '0.9rem', lineHeight: '1.6', color: 'var(--gray-dark)' }}>
+                    <ReactMarkdown>{res.professional_comment || res.comment || '解析エラー'}</ReactMarkdown>
+                  </div>
                 </div>
+
+                {/* お題に対するAIのツッコミ */}
+                {res.roast_comment && (
+                  <div style={{ padding: '1rem', backgroundColor: '#fff5f5', borderRadius: '8px', border: '1px dashed #E53E3E' }}>
+                    <p style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#E53E3E', margin: '0 0 0.5rem 0' }}>🔥お題に対してのツッコミ</p>
+                    <div style={{ fontSize: '0.9rem', lineHeight: '1.6', color: '#C53030', fontWeight: 'bold' }}>
+                      <ReactMarkdown>{res.roast_comment}</ReactMarkdown>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           ))}
