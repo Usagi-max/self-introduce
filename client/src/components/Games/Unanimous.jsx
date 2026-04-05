@@ -41,7 +41,7 @@ function Unanimous({ socket, room, isHost, playerName, roomId }) {
 
   // Host evaluation states
   const [evalMode, setEvalMode] = useState(false);
-  const [safePlayerIds, setSafePlayerIds] = useState([]);
+  const [penalizedPlayerIds, setPenalizedPlayerIds] = useState([]);
 
   // Compute default strict minority if host opens evalMode
   const initiateEvalMode = () => {
@@ -52,47 +52,45 @@ function Unanimous({ socket, room, isHost, playerName, roomId }) {
     let maxCount = 0;
     Object.values(counts).forEach(c => { if(c > maxCount) maxCount = c; });
     
-    const safeIds = [];
+    const penalizedIds = [];
     Object.entries(gameData.answers).forEach(([pid, ans]) => {
-      // safe if they belong to the majority answer
-      if (counts[ans.text] === maxCount && maxCount > 1) {
-         safeIds.push(pid);
+      // penalized if they don't belong to the majority answer, or if NO majority (maxCount=1)
+      if (counts[ans.text] !== maxCount || maxCount === 1) {
+         penalizedIds.push(pid);
       }
     });
-    // If it was 1-1-1 everyone is wrong (safeIds empty), else safeIds has the majority.
-    // However if everyone matched completely, safeIds has everyone.
-    setSafePlayerIds(safeIds);
+    setPenalizedPlayerIds(penalizedIds);
     setEvalMode(true);
   };
 
-  const toggleSafePlayer = (pid) => {
-    if (safePlayerIds.includes(pid)) {
-      setSafePlayerIds(safePlayerIds.filter(id => id !== pid));
+  const togglePenalizedPlayer = (pid) => {
+    if (penalizedPlayerIds.includes(pid)) {
+      setPenalizedPlayerIds(penalizedPlayerIds.filter(id => id !== pid));
     } else {
-      setSafePlayerIds([...safePlayerIds, pid]);
+      setPenalizedPlayerIds([...penalizedPlayerIds, pid]);
     }
   };
 
   const confirmScores = (isStrictAuto = false) => {
-    let idsToSave = safePlayerIds;
+    let idsToSave = [];
+    let minorityIds = [];
     
     if (isStrictAuto) {
-      // Recalculate auto just to be sure
       const allAnswers = Object.values(gameData.answers).map(a => a.text);
       const counts = {};
       allAnswers.forEach(a => counts[a] = (counts[a] || 0) + 1);
       let maxCount = 0;
       Object.values(counts).forEach(c => { if(c > maxCount) maxCount = c; });
-      idsToSave = [];
       Object.entries(gameData.answers).forEach(([pid, ans]) => {
         if (counts[ans.text] === maxCount && maxCount > 1) idsToSave.push(pid);
       });
-      // if literally true unanimous, everyone is safe.
       const isUnanimous = Object.values(gameData.answers).every(a => a.text === Object.values(gameData.answers)[0].text);
       if (isUnanimous) idsToSave = Object.keys(gameData.answers);
+      
+      minorityIds = Object.keys(gameData.answers).filter(pid => !idsToSave.includes(pid));
+    } else {
+      minorityIds = penalizedPlayerIds;
     }
-    
-    const minorityIds = Object.keys(gameData.answers).filter(pid => !idsToSave.includes(pid));
     
     minorityIds.forEach(pid => {
       const p = room.players.find(x => x.id === pid);
@@ -109,7 +107,7 @@ function Unanimous({ socket, room, isHost, playerName, roomId }) {
 
     socket.emit('update_game_state', {
       roomId,
-      payload: { gameData: { ...gameData, scoredThisRound: true } }
+      payload: { gameData: { ...gameData, scoredThisRound: true, finalPenalizedIds: minorityIds } }
     });
     setEvalMode(false);
   };
@@ -267,34 +265,38 @@ function Unanimous({ socket, room, isHost, playerName, roomId }) {
       </div>
 
       <div style={{ width: '100%' }}>
-        {Object.entries(gameData.answers).map(([pid, ans]) => (
+        {Object.entries(gameData.answers).map(([pid, ans]) => {
+          const isPenalized = gameData.scoredThisRound ? (gameData.finalPenalizedIds || []).includes(pid) : (evalMode && penalizedPlayerIds.includes(pid));
+          
+          return (
           <div key={pid} style={{ 
              display: 'flex', 
              justifyContent: 'space-between',
              padding: '1rem',
              borderBottom: '1px solid var(--gray-light)',
              alignItems: 'center',
-             backgroundColor: (gameData.scoredThisRound ? false : evalMode) ? (safePlayerIds.includes(pid) ? '#f0fff4' : '#fff5f5') : 'transparent'
+             backgroundColor: (gameData.scoredThisRound || evalMode) ? (isPenalized ? '#fff5f5' : '#f0fff4') : 'transparent'
           }}>
             <span style={{ fontWeight: 600 }}>
               {evalMode && !gameData.scoredThisRound && isHost && (
                 <input 
                   type="checkbox" 
-                  checked={safePlayerIds.includes(pid)}
-                  onChange={() => toggleSafePlayer(pid)}
+                  checked={isPenalized}
+                  onChange={() => togglePenalizedPlayer(pid)}
                   style={{ marginRight: '0.75rem', transform: 'scale(1.5)' }}
                 />
               )}
               {ans.name}
-              {(gameData.scoredThisRound ? false : evalMode) && (
-                <span style={{ fontSize: '0.75rem', marginLeft: '0.5rem', color: safePlayerIds.includes(pid) ? '#38A169' : '#E53E3E' }}>
-                  {safePlayerIds.includes(pid) ? '(セーフ)' : '(戦犯)'}
+              {(gameData.scoredThisRound || evalMode) && (
+                <span style={{ fontSize: '0.75rem', marginLeft: '0.5rem', color: isPenalized ? '#E53E3E' : '#38A169' }}>
+                  {isPenalized ? '(戦犯)' : '(セーフ)'}
                 </span>
               )}
             </span>
             <span style={{ fontSize: '1.25rem', fontWeight: 800 }}>{ans.text}</span>
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {isHost && !gameData.scoredThisRound && (
@@ -310,8 +312,11 @@ function Unanimous({ socket, room, isHost, playerName, roomId }) {
               </button>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', border: '1px solid var(--primary)', padding: '1rem', borderRadius: '8px', backgroundColor: '#f0fffd' }}>
-              <p style={{ color: 'var(--primary)', fontWeight: 'bold' }}>セーフ（一致）とする人を上のリストでチェックしてください。<br/><span style={{fontSize: '0.875rem', color: '#E53E3E'}}>※ チェックが入っていない人が全員戦犯になります</span></p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', border: '1px solid var(--primary)', padding: '1rem', borderRadius: '8px', backgroundColor: '#fff5f5' }}>
+              <p style={{ color: '#E53E3E', fontWeight: 'bold' }}>
+                お題に沿っていない人（戦犯）を上のリストでチェックしてください。<br/>
+                <span style={{fontSize: '0.875rem', color: 'var(--gray-dark)'}}>※ もし誰も一致しなかった場合は話し合って一番酷い人を選んでください。</span>
+              </p>
               <button className="btn btn-primary" onClick={() => confirmScores(false)}>
                 チェックした内容で結果確定
               </button>

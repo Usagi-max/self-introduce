@@ -141,10 +141,11 @@ h3 { font-size: 1.5rem; margin-bottom: 0.5rem; }
 
 @media (max-width: 600px) {
   .container {
-    padding: 1rem 0.5rem;
+    padding: 0.5rem 0;
   }
   .card {
-    padding: 1.25rem 1rem;
+    padding: 1rem 0.5rem;
+    border-radius: 0;
   }
 }
 
