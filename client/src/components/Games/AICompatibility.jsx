@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import html2canvas from 'html2canvas';
+import { Sparkles, Dna, Target, Camera, Lightbulb, Users, UserPlus, Heart, Briefcase, UserCheck } from 'lucide-react';
+import ProfileModal from '../ProfileModal';
 
 const API_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001').replace(/\/$/, "");
 
@@ -58,25 +60,33 @@ function AICompatibility({ socket, room, isHost, playerName, roomId }) {
   const [selectedPreset, setSelectedPreset] = useState(ADDITIONAL_DIAGNOSIS_PRESETS[0]);
   const [additionalPrompt, setAdditionalPrompt] = useState('');
   const [isAdditionalLoading, setIsAdditionalLoading] = useState(false);
+  const [relationship, setRelationship] = useState('指定なし (ランダム)');
+  
+  const [selectedProfilePlayer, setSelectedProfilePlayer] = useState(null);
+  const [spinRelationship, setSpinRelationship] = useState('????');
 
   const resultRef = useRef(null);
+  const [profileLoaded, setProfileLoaded] = useState(false);
   
   useEffect(() => {
-    const me = room.players.find(p => p.id === socket.id);
-    if (me && me.metadata?.compatibilityProfile) {
-      const p = me.metadata.compatibilityProfile;
-      setBloodType(p.bloodType || '不明');
-      setMbti(p.mbti || '不明');
-      setSiblingsCount(p.siblingsCount || 1);
-      setBirthOrder(p.birthOrder || 1);
-      setSiblingGenders(p.siblingGenders || ['不明']);
-      setHasCloseSibling(p.hasCloseSibling || false);
-      setCloseSiblingRank(p.closeSiblingRank || '1');
-      setCloseSiblingReason(p.closeSiblingReason || '');
-      setZodiac(p.zodiac || '不明');
-      setOpinions(p.opinions || [{ relation: '', opinion: '' }]);
+    if (!profileLoaded) {
+      const me = room.players.find(p => p.id === socket.id);
+      if (me && me.metadata?.compatibilityProfile) {
+        const p = me.metadata.compatibilityProfile;
+        setBloodType(p.bloodType || '不明');
+        setMbti(p.mbti || '不明');
+        setSiblingsCount(p.siblingsCount || 1);
+        setBirthOrder(p.birthOrder || 1);
+        setSiblingGenders(p.siblingGenders || ['不明']);
+        setHasCloseSibling(p.hasCloseSibling || false);
+        setCloseSiblingRank(p.closeSiblingRank || '1');
+        setCloseSiblingReason(p.closeSiblingReason || '');
+        setZodiac(p.zodiac || '不明');
+        setOpinions(p.opinions || [{ relation: '', opinion: '' }]);
+      }
+      setProfileLoaded(true);
     }
-  }, [socket.id, room.players]);
+  }, [socket.id, room.players, profileLoaded]);
 
   const gameData = room.state.gameData || { 
     phase: 'setup', 
@@ -108,10 +118,13 @@ function AICompatibility({ socket, room, isHost, playerName, roomId }) {
   useEffect(() => {
     if (gameData.phase === 'roulette_spinning' && gameData.currentPair) {
       let count = 0;
+      const relations = ['兄弟', 'ライバル', '恋人', '親友', '上司と部下', '親子'];
       const intervalId = setInterval(() => {
         const randA = players[Math.floor(Math.random() * players.length)]?.name || 'A';
         const randB = players[Math.floor(Math.random() * players.length)]?.name || 'B';
+        const randRel = relations[Math.floor(Math.random() * relations.length)];
         setSpinNames([randA, randB]);
+        setSpinRelationship(randRel);
         count++;
       }, 80);
 
@@ -120,6 +133,7 @@ function AICompatibility({ socket, room, isHost, playerName, roomId }) {
         const playerA = players.find(p => p.id === gameData.currentPair[0])?.name || '...';
         const playerB = players.find(p => p.id === gameData.currentPair[1])?.name || '...';
         setSpinNames([playerA, playerB]);
+        setSpinRelationship(gameData.relationship || '指定なし (ランダム)');
         
         if (isHost) {
           if (window.__compatibilityBgPromise) {
@@ -220,7 +234,7 @@ function AICompatibility({ socket, room, isHost, playerName, roomId }) {
       const response = await fetch(`${API_URL}/api/ai/compatibility_pair`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ profiles: [p1, p2], persona: newPersona })
+        body: JSON.stringify({ profiles: [p1, p2], persona: newPersona, relationship: gameData.relationship || '指定なし (ランダム)' })
       });
       const aiContext = await response.json();
       const messageText = aiContext.content[0].text;
@@ -264,10 +278,13 @@ function AICompatibility({ socket, room, isHost, playerName, roomId }) {
     const selectedPair = availablePairs[Math.floor(Math.random() * availablePairs.length)];
     const pairStr = [selectedPair[0], selectedPair[1]].sort().join('_');
 
+    const relations = ['兄弟', 'ライバル', '恋人', '親友', '上司と部下', '親子'];
+    const selectedRel = relationship === '指定なし (ランダム)' ? relations[Math.floor(Math.random() * relations.length)] : relationship;
+
     socket.emit('update_game_state', {
       roomId,
       payload: {
-        gameData: { ...gameData, phase: 'roulette_spinning', currentPair: selectedPair, evaluatedPairs: [...gameData.evaluatedPairs, pairStr] }
+        gameData: { ...gameData, phase: 'roulette_spinning', currentPair: selectedPair, evaluatedPairs: [...gameData.evaluatedPairs, pairStr], relationship: selectedRel }
       }
     });
 
@@ -277,7 +294,7 @@ function AICompatibility({ socket, room, isHost, playerName, roomId }) {
       window.__compatibilityBgPromise = fetch(`${API_URL}/api/ai/compatibility_pair`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ profiles: [p1, p2], persona: room.state.persona || 'michael' })
+        body: JSON.stringify({ profiles: [p1, p2], persona: room.state.persona || 'michael', relationship: selectedRel })
       })
       .then(res => res.json())
       .then(aiContext => {
@@ -302,7 +319,7 @@ function AICompatibility({ socket, room, isHost, playerName, roomId }) {
       const response = await fetch(`${API_URL}/api/ai/compatibility_pair`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ profiles: [p1, p2], persona: room.state.persona || 'michael' })
+        body: JSON.stringify({ profiles: [p1, p2], persona: room.state.persona || 'michael', relationship: gameData.relationship || '指定なし (ランダム)' })
       });
       const aiContext = await response.json();
       const messageText = aiContext.content[0].text;
@@ -369,12 +386,36 @@ function AICompatibility({ socket, room, isHost, playerName, roomId }) {
             {Math.max(0, activeCount - answeredCount)}人 待ち
           </div>
           <div className="loader" style={{ marginTop: '2rem', marginBottom: '3rem' }}></div>
+          
+          {/* 追加：プレイヤー一覧表示 */}
+          <div style={{ width: '100%', maxWidth: '400px', marginBottom: '3rem', textAlign: 'left' }}>
+            <h4 style={{ color: 'var(--gray-dark)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Users size={18} /> 参加プレイヤーのプロフィール</h4>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {room.players.map(p => (
+                <div 
+                  key={p.id} 
+                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 1rem', backgroundColor: '#fff', borderRadius: '8px', border: '1px solid var(--gray-light)', cursor: 'pointer', transition: 'all 0.2s' }}
+                  onClick={() => setSelectedProfilePlayer(p)}
+                >
+                  <span style={{ fontWeight: 'bold' }}>{p.name} {p.id === socket.id && '(あなた)'}</span>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}><UserPlus size={14} /> 見る</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
           <div style={{ padding: '2rem', backgroundColor: '#f5f7fa', borderRadius: '12px', border: '1px dashed var(--primary)' }}>
             <p style={{ fontWeight: 'bold', marginBottom: '1rem', color: 'var(--gray-dark)' }}>＼ 毎回入力するのが面倒な方へ ／</p>
-            <a href="/register" target="_blank" rel="noopener noreferrer" className="btn btn-primary" style={{ display: 'inline-block', textDecoration: 'none', backgroundColor: '#FB8C00' }}>
-              会員登録して次回の入力を自動化する ✨
+            <a href="/register" target="_blank" rel="noopener noreferrer" className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', textDecoration: 'none', backgroundColor: '#FB8C00' }}>
+              会員登録して次回の入力を自動化する <Sparkles size={16} />
             </a>
           </div>
+
+          <ProfileModal 
+            isOpen={selectedProfilePlayer !== null} 
+            onClose={() => setSelectedProfilePlayer(null)} 
+            player={selectedProfilePlayer} 
+          />
         </div>
       );
     }
@@ -506,9 +547,17 @@ function AICompatibility({ socket, room, isHost, playerName, roomId }) {
         <p style={{ color: 'var(--gray-medium)', marginBottom: '2rem' }}>ルーレットで2人組を選んで、相性を診断していきます。</p>
         
         {isHost ? (
-           <button className="btn btn-primary" onClick={spinRoulette} style={{ fontSize: '1.25rem', padding: '1rem 3rem' }}>
-             ルーレットを回す！ 🎯
-           </button>
+           <div style={{ width: '100%', maxWidth: '400px' }}>
+             <div style={{ marginBottom: '1.5rem', textAlign: 'left', backgroundColor: 'var(--light)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--gray-light)' }}>
+               <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.5rem', color: 'var(--gray-dark)' }}>診断する関係性</label>
+               <select className="input-field" value={relationship} onChange={e => setRelationship(e.target.value)}>
+                 {['指定なし (ランダム)', '兄弟', 'ライバル', '恋人', '親友', '上司と部下', '親子'].map(r => <option key={r} value={r}>{r}</option>)}
+               </select>
+             </div>
+             <button className="btn btn-primary" onClick={spinRoulette} style={{ fontSize: '1.25rem', padding: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', width: '100%' }}>
+               ルーレットを回す！ <Target size={20} />
+             </button>
+           </div>
         ) : (
            <p style={{ fontWeight: 'bold' }}>ホストがルーレットを回すのを待っています...</p>
         )}
@@ -534,6 +583,12 @@ function AICompatibility({ socket, room, isHost, playerName, roomId }) {
         </div>
 
         {gameData.phase === 'analyzing_pair' && <div className="loader" style={{ marginTop: '2rem' }}></div>}
+        
+        {gameData.phase === 'roulette_spinning' && (
+          <div style={{ marginTop: '2rem', fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--gray-dark)' }}>
+            関係性：<span style={{ color: 'var(--primary)' }}>{spinRelationship}</span>
+          </div>
+        )}
       </div>
     );
   }
@@ -546,9 +601,12 @@ function AICompatibility({ socket, room, isHost, playerName, roomId }) {
   return (
     <div className="card animate-pop" style={{ padding: '1.5rem 1rem' }}>
       <div ref={resultRef} style={{ padding: '1rem', backgroundColor: '#fff' }}>
-        <h3 style={{ color: 'var(--gray-medium)', textAlign: 'center', marginBottom: '1.5rem' }}>
+        <h3 style={{ color: 'var(--gray-medium)', textAlign: 'center', marginBottom: '0.5rem' }}>
           {playerA} × {playerB}<br/>AI相性診断結果
         </h3>
+        <p style={{ textAlign: 'center', fontWeight: 'bold', color: 'var(--primary)', marginBottom: '1.5rem' }}>
+          【関係性：{gameData.relationship || '不明'}】
+        </p>
 
         <div style={{ backgroundColor: 'var(--light)', borderRadius: 'var(--radius-md)', padding: '1.5rem', textAlign: 'center', border: '4px solid #E53E3E', marginBottom: '1.5rem' }}>
         <p style={{ fontWeight: 800, color: 'var(--gray-medium)', marginBottom: '0.5rem' }}>二人のテーマ</p>
@@ -579,8 +637,8 @@ function AICompatibility({ socket, room, isHost, playerName, roomId }) {
       </div>
 
       <div style={{ textAlign: 'center', margin: '1rem 0' }}>
-        <button className="btn btn-secondary" onClick={handleSaveImage} style={{ width: 'auto', fontSize: '0.875rem' }}>
-          📸 結果を画像として端末に保存
+        <button className="btn btn-secondary" onClick={handleSaveImage} style={{ width: 'auto', fontSize: '0.875rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+          <Camera size={16} /> 結果を画像として端末に保存
         </button>
       </div>
 
@@ -604,15 +662,22 @@ function AICompatibility({ socket, room, isHost, playerName, roomId }) {
         <div style={{ marginTop: '1rem', display: 'flex', gap: '1rem', flexDirection: 'column' }}>
           
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', justifyContent: 'center', backgroundColor: '#fff', padding: '1rem', borderRadius: '8px', border: '1px solid var(--gray-light)' }}>
-             <p style={{ width: '100%', textAlign: 'center', fontSize: '0.875rem', fontWeight: 'bold', color: 'var(--gray-dark)', margin: '0 0 0.5rem 0' }}>💡別の診断士にも意見を聞いてみる</p>
-             <button className="btn btn-secondary" style={{ flex: 1, minWidth: '120px', padding: '0.5rem' }} onClick={() => reEvaluateWithPersona('michael')}>🇺🇸 マイケルに聞く</button>
-             <button className="btn btn-secondary" style={{ flex: 1, minWidth: '120px', padding: '0.5rem' }} onClick={() => reEvaluateWithPersona('butler')}>🤵 セバスチャンに聞く</button>
-             <button className="btn btn-secondary" style={{ flex: 1, minWidth: '120px', padding: '0.5rem' }} onClick={() => reEvaluateWithPersona('gal')}>💅 辛口ギャルに聞く</button>
-             <button className="btn btn-secondary" style={{ flex: 1, minWidth: '120px', padding: '0.5rem' }} onClick={() => reEvaluateWithPersona('onee')}>💋 歌舞伎町オネエ</button>
+             <p style={{ width: '100%', textAlign: 'center', fontSize: '0.875rem', fontWeight: 'bold', color: 'var(--gray-dark)', margin: '0 0 0.5rem 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }}><Lightbulb size={14} /> 別の診断士にも意見を聞いてみる</p>
+             <button className="btn btn-secondary" style={{ flex: 1, minWidth: '120px', padding: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }} onClick={() => reEvaluateWithPersona('michael')}><Users size={14} /> マイケルに聞く</button>
+             <button className="btn btn-secondary" style={{ flex: 1, minWidth: '120px', padding: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }} onClick={() => reEvaluateWithPersona('butler')}><Briefcase size={14} /> セバスチャンに聞く</button>
+             <button className="btn btn-secondary" style={{ flex: 1, minWidth: '120px', padding: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }} onClick={() => reEvaluateWithPersona('gal')}><Heart size={14} /> 辛口ギャルに聞く</button>
+             <button className="btn btn-secondary" style={{ flex: 1, minWidth: '120px', padding: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }} onClick={() => reEvaluateWithPersona('onee')}><UserCheck size={14} /> 歌舞伎町オネエ</button>
           </div>
 
-          <button className="btn btn-primary" onClick={spinRoulette}>
-            次のペアを診断する 🎯
+          <div style={{ backgroundColor: 'var(--light)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--gray-light)', marginBottom: '1rem' }}>
+            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.5rem', color: 'var(--gray-dark)', textAlign: 'center' }}>次の診断の関係性</label>
+            <select className="input-field" value={relationship} onChange={e => setRelationship(e.target.value)}>
+              {['指定なし (ランダム)', '兄弟', 'ライバル', '恋人', '親友', '上司と部下', '親子'].map(r => <option key={r} value={r}>{r}</option>)}
+            </select>
+          </div>
+
+          <button className="btn btn-primary" onClick={spinRoulette} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+            次のペアを診断する <Target size={18} />
           </button>
           <button className="btn btn-secondary" onClick={() => {
             socket.emit('update_game_state', { roomId, payload: { status: 'lobby', game: null } });

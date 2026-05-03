@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { Smile, Bot, Skull } from 'lucide-react';
 
 const PENALTY_PRESETS = [
-  { name: '😅 軽め', topics: ['最近あった恥ずかしいこと', '一番好きな人にモノマネをリクエスト', '全力でアイドルスマイル'] },
-  { name: '🤖 AI相談', topics: ['AIに自分の恥ずかしい秘密を暴露される', 'AIに自分好みの異性のタイプを聞く', 'AIに最近悩んでいることを出力させる'] },
-  { name: '💀 鬼畜', topics: ['スマホの検索履歴を一番上から3つ発表', 'カメラに向かって全力で愛の告白', '全員にジュースを奢る約束をする'] }
+  { icon: <Smile size={14} />, name: '軽め', topics: ['最近あった恥ずかしいこと', '一番好きな人にモノマネをリクエスト', '全力でアイドルスマイル'] },
+  { icon: <Bot size={14} />, name: 'AI相談', topics: ['AIに自分の恥ずかしい秘密を暴露される', 'AIに自分好みの異性のタイプを聞く', 'AIに最近悩んでいることを出力させる'] },
+  { icon: <Skull size={14} />, name: '鬼畜', topics: ['スマホの検索履歴を一番上から3つ発表', 'カメラに向かって全力で愛の告白', '全員にジュースを奢る約束をする'] }
 ];
 
 const COMMON_PENALTIES = [
@@ -140,7 +141,9 @@ function Penalty({ socket, room, isHost, roomId }) {
 
     return (
       <div className="card set-content animate-pop" style={{ textAlign: 'left' }}>
-        <h3 style={{ marginBottom: '1.5rem', color: '#E53E3E', textAlign: 'center' }}>💀 罰ゲームルーレット設定</h3>
+        <h3 style={{ marginBottom: '1.5rem', color: '#E53E3E', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+          <Skull size={24} /> 罰ゲームルーレット設定
+        </h3>
         
         {/* Target Selection */}
         <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#fff5f5', borderRadius: '8px', border: '1px solid #fed7d7' }}>
@@ -165,10 +168,10 @@ function Penalty({ socket, room, isHost, roomId }) {
             <button 
               key={i} 
               className="btn btn-secondary" 
-              style={{ whiteSpace: 'nowrap', padding: '0.4rem 0.75rem', fontSize: '0.75rem', backgroundColor: 'var(--white)', border: '1px solid #E53E3E', color: '#E53E3E' }}
+              style={{ whiteSpace: 'nowrap', padding: '0.4rem 0.75rem', fontSize: '0.75rem', backgroundColor: 'var(--white)', border: '1px solid #E53E3E', color: '#E53E3E', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
               onClick={() => applyPreset(preset.topics)}
             >
-              {preset.name}
+              {preset.icon} {preset.name}
             </button>
           ))}
         </div>
@@ -285,8 +288,8 @@ function Penalty({ socket, room, isHost, roomId }) {
   // Execute Phase
   return (
     <div className="card center-content animate-pop" style={{ backgroundColor: '#FFebF0', border: '4px solid #E53E3E', minHeight: '60vh' }}>
-      <h2 style={{ fontSize: '2.5rem', color: '#E53E3E', marginBottom: '2rem', fontWeight: 900, textShadow: '2px 2px 0px rgba(0,0,0,0.1)' }}>
-        💀 罰ゲーム 決定 💀
+      <h2 style={{ fontSize: '2.5rem', color: '#E53E3E', marginBottom: '2rem', fontWeight: 900, textShadow: '2px 2px 0px rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+        <Skull size={32} /> 罰ゲーム 決定 <Skull size={32} />
       </h2>
       
       <div style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: '0.5rem', color: 'var(--dark)' }}>

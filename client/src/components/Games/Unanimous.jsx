@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { PartyPopper, XCircle, Users, UserPlus } from 'lucide-react';
+import ProfileModal from '../ProfileModal';
 
 const QUESTIONS = [
   '赤い果物といえば？',
@@ -11,6 +13,7 @@ function Unanimous({ socket, room, isHost, playerName, roomId }) {
   const [answer, setAnswer] = useState('');
   const [mySubmission, setMySubmission] = useState(false);
   const [customPrompt, setCustomPrompt] = useState('');
+  const [selectedProfilePlayer, setSelectedProfilePlayer] = useState(null);
 
   const gameData = room.state.gameData || { question: '', answers: {}, phase: 'waiting', chooserIndex: 0, round: 1 };
 
@@ -207,11 +210,38 @@ function Unanimous({ socket, room, isHost, playerName, roomId }) {
             {Math.max(0, activeCount - answeredCount)}人 待ち
           </div>
           
-          <div style={{ marginTop: '2rem' }}>
+          <div style={{ width: '100%', maxWidth: '400px', marginBottom: '2rem', textAlign: 'left' }}>
+            <h4 style={{ color: 'var(--gray-dark)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Users size={18} /> 参加プレイヤーのプロフィール</h4>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {room.players.map(p => {
+                const hasAnswered = !!gameData.answers?.[p.id];
+                return (
+                  <div 
+                    key={p.id} 
+                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 1rem', backgroundColor: hasAnswered ? '#f0fffd' : '#fff', borderRadius: '8px', border: hasAnswered ? '1px solid var(--primary)' : '1px solid var(--gray-light)', cursor: 'pointer', transition: 'all 0.2s' }}
+                    onClick={() => setSelectedProfilePlayer(p)}
+                  >
+                    <span style={{ fontWeight: 'bold' }}>{p.name} {p.id === socket.id && '(あなた)'}</span>
+                    <span style={{ fontSize: '0.8rem', color: hasAnswered ? 'var(--primary)' : 'var(--gray-medium)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                      {hasAnswered ? '✅ 回答済' : '⏳ 回答中...'} <UserPlus size={14} /> 見る
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          
+          <div style={{ marginTop: '1rem' }}>
             <p style={{ color: 'var(--gray-medium)', fontSize: '0.875rem' }}>
               周りの人に「早く〜！」とプレッシャーをかけよう！
             </p>
           </div>
+
+          <ProfileModal 
+            isOpen={selectedProfilePlayer !== null} 
+            onClose={() => setSelectedProfilePlayer(null)} 
+            player={selectedProfilePlayer} 
+          />
         </div>
       );
     }
@@ -265,7 +295,7 @@ function Unanimous({ socket, room, isHost, playerName, roomId }) {
         marginBottom: '2rem',
         animation: 'popIn 0.5s ease-out'
       }}>
-        {isUnanimous ? '🎉 全員一致！ 大成功！' : '❌ 残念！ 不一致...'}
+        {isUnanimous ? <><PartyPopper size={32} /> 全員一致！ 大成功！</> : <><XCircle size={32} /> 残念！ 不一致...</>}
       </div>
 
       <div style={{ width: '100%' }}>

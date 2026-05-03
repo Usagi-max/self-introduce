@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
+import { Star, Beer, Building2, Plus, X, Save, Ban } from 'lucide-react';
 
 const DEFAULT_PRESETS = [
-  { name: '🔰 定番', topics: ['出身地', '血液型', '好きな食べ物', 'マイブーム', '趣味', '休日の過ごし方'] },
-  { name: '🍻 飲み会・合コン', topics: ['初恋の思い出', '最近のやらかし', '誰にも言えない秘密', 'フェチ', '一番のエピソード', '好きなタイプ'] },
-  { name: '🏢 ビジネスアイスブレイク', topics: ['今年挑戦したいこと', '最近買った高いもの', '子供の頃の夢', '尊敬する人', '自分を動物に例えると', '最近の小さな幸せ'] }
+  { icon: <Star size={14} />, name: '定番', topics: ['出身地', '血液型', '好きな食べ物', 'マイブーム', '趣味', '休日の過ごし方'] },
+  { icon: <Beer size={14} />, name: '飲み会・合コン', topics: ['初恋の思い出', '最近のやらかし', '誰にも言えない秘密', 'フェチ', '一番のエピソード', '好きなタイプ'] },
+  { icon: <Building2 size={14} />, name: 'ビジネスアイスブレイク', topics: ['今年挑戦したいこと', '最近買った高いもの', '子供の頃の夢', '尊敬する人', '自分を動物に例えると', '最近の小さな幸せ'] }
 ];
 
 const COMMON_TOPICS = [
@@ -79,10 +80,10 @@ export default function RouletteSetup({ socket, room, roomId, forceOpen, onSaved
           <button 
             key={i} 
             className="btn btn-secondary" 
-            style={{ whiteSpace: 'nowrap', padding: '0.4rem 0.75rem', fontSize: '0.75rem', backgroundColor: 'var(--white)' }}
+            style={{ whiteSpace: 'nowrap', padding: '0.4rem 0.75rem', fontSize: '0.75rem', backgroundColor: 'var(--white)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
             onClick={() => applyPreset(preset.topics)}
           >
-            {preset.name}
+            {preset.icon} {preset.name}
           </button>
         ))}
       </div>
@@ -97,7 +98,7 @@ export default function RouletteSetup({ socket, room, roomId, forceOpen, onSaved
           onKeyDown={(e) => e.key === 'Enter' && handleAddTopic()}
           style={{ padding: '0.5rem', fontSize: '0.875rem' }}
         />
-        <button className="btn btn-secondary" style={{ width: 'auto', padding: '0.5rem 1rem' }} onClick={handleAddTopic}>追加</button>
+        <button className="btn btn-secondary" style={{ width: 'auto', padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }} onClick={handleAddTopic}><Plus size={16} /> 追加</button>
       </div>
 
       <div style={{ marginBottom: '1.5rem' }}>
@@ -112,10 +113,11 @@ export default function RouletteSetup({ socket, room, roomId, forceOpen, onSaved
                 fontSize: '0.75rem', padding: '0.2rem 0.5rem', borderRadius: '4px', border: '1px solid var(--gray-light)', 
                 backgroundColor: tempTopics.includes(t) ? 'var(--gray-light)' : 'var(--white)',
                 color: tempTopics.includes(t) ? 'var(--gray-medium)' : 'var(--dark)',
-                cursor: tempTopics.includes(t) ? 'default' : 'pointer'
+                cursor: tempTopics.includes(t) ? 'default' : 'pointer',
+                display: 'flex', alignItems: 'center', gap: '0.25rem'
               }}
             >
-              + {t}
+              <Plus size={12} /> {t}
             </button>
           ))}
         </div>
@@ -125,15 +127,15 @@ export default function RouletteSetup({ socket, room, roomId, forceOpen, onSaved
         {tempTopics.map((t, i) => (
           <div key={i} style={{ backgroundColor: 'var(--white)', padding: '0.25rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem', border: '1px solid var(--gray-light)' }}>
             {t}
-            <button onClick={() => handleRemoveTopic(i)} style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', padding: 0 }}>×</button>
+            <button onClick={() => handleRemoveTopic(i)} style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }}><X size={14} /></button>
           </div>
         ))}
       </div>
 
       <div style={{ display: 'flex', gap: '0.5rem' }}>
-        <button className="btn btn-primary" style={{ padding: '0.5rem', fontSize: '0.875rem' }} onClick={saveSettings}>保存</button>
+        <button className="btn btn-primary" style={{ padding: '0.5rem', fontSize: '0.875rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }} onClick={saveSettings}><Save size={16} /> 保存</button>
         {!forceOpen && (
-          <button className="btn btn-secondary" style={{ padding: '0.5rem', fontSize: '0.875rem' }} onClick={() => setIsOpen(false)}>キャンセル</button>
+          <button className="btn btn-secondary" style={{ padding: '0.5rem', fontSize: '0.875rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }} onClick={() => setIsOpen(false)}><Ban size={16} /> キャンセル</button>
         )}
       </div>
     </div>

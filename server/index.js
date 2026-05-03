@@ -56,8 +56,8 @@ app.post('/api/ai/compatibility', async (req, res) => {
 });
 
 app.post('/api/ai/compatibility_pair', async (req, res) => {
-  const { profiles, persona } = req.body;
-  const promptText = JSON.stringify(profiles, null, 2);
+  const { profiles, persona, relationship } = req.body;
+  const promptText = JSON.stringify({ profiles, relationship }, null, 2);
   const aiResponse = await generateMockResponse(promptText, 'compatibility_pair', null, persona);
 
   if (aiResponse.content && aiResponse.content[0]) {

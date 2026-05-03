@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import RouletteSetup from './RouletteSetup';
+import { Play } from 'lucide-react';
 
 function Roulette({ socket, room, isHost, playerName, roomId }) {
   const topics = room.state.rouletteTopics || ['お題が見つかりません'];
-  const gameData = room.state.gameData || { phase: 'ready', spinning: false, resultTopic: '', resultPlayer: null };
+  const gameData = room.state.gameData || { phase: 'setup', spinning: false, resultTopic: '', resultPlayer: null };
   
   const [spinText, setSpinText] = useState('???');
   const [targetIds, setTargetIds] = useState([]);
@@ -59,9 +61,42 @@ function Roulette({ socket, room, isHost, playerName, roomId }) {
     }, 3000);
   };
 
+  if (gameData.phase === 'setup') {
+    return (
+      <div className="card center-content animate-pop" style={{ minHeight: '60vh' }}>
+        <h2 style={{ marginBottom: '1rem', color: 'var(--primary)', fontWeight: 900 }}>自己紹介ルーレット</h2>
+        <div style={{ marginBottom: '2rem', width: '100%', maxWidth: '500px' }}>
+          <RouletteSetup socket={socket} room={room} roomId={roomId} forceOpen={true} />
+        </div>
+        {isHost ? (
+          <button 
+            className="btn btn-primary"
+            onClick={() => socket.emit('update_game_state', { roomId, payload: { gameData: { ...gameData, phase: 'ready' } } })}
+            style={{ width: '100%', maxWidth: '280px', borderRadius: '100px', fontWeight: 800, fontSize: '1.1rem', padding: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+          >
+            <Play size={20} /> このお題で始める
+          </button>
+        ) : (
+          <p style={{ color: 'var(--gray-medium)', fontWeight: 600 }}>ホストがお題を設定しています...</p>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="card center-content animate-pop" style={{ minHeight: '60vh' }}>
-      <h2 style={{ marginBottom: '1rem', color: 'var(--primary)', fontWeight: 900 }}>自己紹介ルーレット</h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: '1rem' }}>
+        <h2 style={{ color: 'var(--primary)', fontWeight: 900, margin: 0 }}>自己紹介ルーレット</h2>
+        {isHost && !gameData.spinning && gameData.phase !== 'result' && (
+          <button 
+            className="btn btn-secondary" 
+            style={{ width: 'auto', padding: '0.25rem 0.75rem', fontSize: '0.75rem' }}
+            onClick={() => socket.emit('update_game_state', { roomId, payload: { gameData: { ...gameData, phase: 'setup' } } })}
+          >
+            お題を編集
+          </button>
+        )}
+      </div>
       
       {/* お題リスト公開エリア */}
       <div style={{ marginBottom: '2.5rem', maxWidth: '100%', overflow: 'hidden' }}>
