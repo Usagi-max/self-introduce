@@ -129,7 +129,22 @@ function App() {
   return (
     <>
       <header className="app-header">
-        <div className="app-logo">自己紹介ゲーム</div>
+        <div 
+          className="app-logo" 
+          onClick={() => {
+            if (window.location.pathname === '/') return;
+            if (window.confirm('ホームに戻りますか？（現在のルームからは退出します）')) {
+              if (socket && room) {
+                // We do not have explicit leave_room emit yet, so just clear local state
+              }
+              sessionStorage.removeItem('savedRoomId');
+              window.location.href = '/';
+            }
+          }}
+          style={{ cursor: 'pointer' }}
+        >
+          自己紹介ゲーム
+        </div>
       </header>
       <Routes>
         <Route 

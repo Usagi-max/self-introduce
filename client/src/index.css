@@ -82,8 +82,10 @@ h3 { font-size: 1.5rem; margin-bottom: 0.5rem; }
   box-shadow: 0 8px 16px rgba(255, 90, 95, 0.3);
 }
 
-.btn-primary:hover {
-  box-shadow: 0 12px 24px rgba(255, 90, 95, 0.4);
+@media (hover: hover) {
+  .btn-primary:hover {
+    box-shadow: 0 12px 24px rgba(255, 90, 95, 0.4);
+  }
 }
 
 .btn-secondary {
@@ -141,11 +143,11 @@ h3 { font-size: 1.5rem; margin-bottom: 0.5rem; }
 
 @media (max-width: 600px) {
   .container {
-    padding: 0.5rem 0;
+    padding: 1rem;
   }
   .card {
     padding: 1rem 0.5rem;
-    border-radius: 0;
+    border-radius: var(--radius-sm);
   }
 }
 
