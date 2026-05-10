@@ -150,7 +150,7 @@ function App() {
           </div>
         </div>
       </header>
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: '100dvh' }}>
         <Routes>
           <Route 
             path="/" 
