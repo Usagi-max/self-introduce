@@ -150,31 +150,36 @@ function App() {
           </div>
         </div>
       </header>
-      <Routes>
-        <Route 
-          path="/" 
-          element={
-            <Home 
-              onCreate={handleCreateRoom} 
-              onJoin={handleJoinRoom}
-              isLoading={isLoading}
-            />
-          } 
-        />
-        <Route 
-          path="/room/:roomId" 
-          element={
-            <Room 
-              socket={socket} 
-              room={room} 
-              isHost={isHost}
-              playerName={playerName}
-            />
-          } 
-        />
-        <Route path="/register" element={<Register />} />
-      </Routes>
+      <main style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+        <Routes>
+          <Route 
+            path="/" 
+            element={
+              <Home 
+                onCreate={handleCreateRoom} 
+                onJoin={handleJoinRoom}
+                isLoading={isLoading}
+              />
+            } 
+          />
+          <Route 
+            path="/room/:roomId" 
+            element={
+              <Room 
+                socket={socket} 
+                room={room} 
+                isHost={isHost}
+                playerName={playerName}
+              />
+            } 
+          />
+          <Route path="/register" element={<Register />} />
+        </Routes>
+      </main>
       <BannerAd />
+      <footer style={{ textAlign: 'center', padding: '1.5rem 1rem', fontSize: '0.8rem', color: 'var(--gray-medium)', borderTop: '1px solid var(--gray-light)', backgroundColor: 'var(--light)', marginTop: 'auto' }}>
+        &copy; {new Date().getFullYear()} アイブレ -AI ice Break- All rights reserved.
+      </footer>
     </>
   )
 }
