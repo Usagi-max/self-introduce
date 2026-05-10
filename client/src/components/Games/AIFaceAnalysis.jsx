@@ -3,44 +3,57 @@ import html2canvas from 'html2canvas';
 import ReactMarkdown from 'react-markdown';
 import { Camera, CheckCircle, Hourglass, FolderOpen, Skull, Lightbulb, Flame, Save, Play } from 'lucide-react';
 import ProfileModal from '../ProfileModal';
+import { useAd } from '../../contexts/AdContext';
+import { AD_CONFIG } from '../../config/adConfig';
 
 const API_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001').replace(/\/$/, "");
 
 const FACE_PROMPTS = [
-  '社長になりそうな人',
-  '絶対に秘密は守らない裏切り者',
-  '休日はずっと寝てそうな人',
-  '実は裏で世界を牛耳っている黒幕',
-  '初対面でめちゃくちゃ良い人そうだけど、後で面倒くさい人',
-  '何を聞いても「へぇー」としか言わない興味ない人',
-  '飲み会で一番最後まで残って語り続ける人'
+  '１億円の宝くじが当たった瞬間',
+  '好きな人からLINEが来た瞬間',
+  '砂漠で１週間ぶりにオアシスを見つけた瞬間',
+  'ずっと探していた推しのグッズが見つかった瞬間',
+  '入院していた家族の手術が成功したと聞いた瞬間',
+  '休日の午後にベンチに座って空を眺めている瞬間',
+  '翌日朝から出勤なのに終電を逃してしまった瞬間',
+  'お会計の時に財布を忘れたと気づいた瞬間',
+  '仕事の開始時間に家で目が覚めてしまった瞬間',
+  'ある日、森の中で、熊さんに出くわした瞬間',
+  '集会で急にスピーチを振られた瞬間',
+  '包丁を紹介するTVショッピングでパンが切れず、切れ味をギコギコで補っている瞬間',
+  '渾身のギャグが滑ってしまった瞬間',
+  '一度会った相手の名前を忘れたことに気づいた瞬間',
+  '厳格な父親が子どもの成長に気づいて微笑む瞬間',
+  '我が子の才能を前に、母親が「恐ろしい子」と心の中で叫ぶ瞬間',
+  '弱虫なのにヤンキーから好きな人を守ろうとしている瞬間',
+  '褒められて嬉しいが、「そんなことないです」と謙遜している瞬間',
+  '居酒屋のキャッチに捕まってしまった瞬間',
+  'バレンタイン当日に呼び出されたが、「このチョコ〇〇君に渡して」と頼まれた瞬間',
+  'またしても壁に落書きをしている息子を母親が目撃した瞬間'
 ];
+
 
 const ADDITIONAL_DIAGNOSIS_PRESETS = [
   "ゾンビ映画に出演したら、誰がどう生き残って誰が最初に死ぬ？",
-  "無人島に漂流！それぞれの役割分担はどうなる？",
-  "全員でRPGのパーティを組んだら？（職業やスキルなど）",
-  "アイドルグループを結成！センターと各担当は？",
-  "お笑い芸人のユニットを組むなら？",
   "全員でシェアハウスをしたら、どんなトラブルが起きる？",
+  "無人島でサバイバルをするなら、それぞれの役割は？",
   "銀行強盗の計画を立てるなら、それぞれの役割は？",
   "デスゲームに参加させられたら、最後まで生き残るのは？",
-  "異世界転生したら、それぞれの職業やスキルは？",
-  "映画「アベンジャーズ」のようなヒーロー集団だとしたら？",
   "自由入力"
 ];
+
 
 function AIFaceAnalysis({ socket, room, isHost, playerName, roomId }) {
   const [photoTaken, setPhotoTaken] = useState(false);
   const [mySubmission, setMySubmission] = useState(false);
   const [imageData, setImageData] = useState(null);
   const [useCamera, setUseCamera] = useState(true);
-  
+
   const [selectedPreset, setSelectedPreset] = useState(ADDITIONAL_DIAGNOSIS_PRESETS[0]);
   const [additionalPrompt, setAdditionalPrompt] = useState('');
   const [isAdditionalLoading, setIsAdditionalLoading] = useState(false);
   const [selectedProfilePlayer, setSelectedProfilePlayer] = useState(null);
-  
+
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -89,13 +102,13 @@ function AIFaceAnalysis({ socket, room, isHost, playerName, roomId }) {
       const canvas = canvasRef.current;
       const context = canvas.getContext('2d');
       if (video.videoWidth && video.videoHeight) {
-         const scale = Math.min(600 / video.videoWidth, 600 / video.videoHeight, 1);
-         canvas.width = video.videoWidth * scale;
-         canvas.height = video.videoHeight * scale;
-         context.drawImage(video, 0, 0, canvas.width, canvas.height);
-         const dataUrl = canvas.toDataURL('image/jpeg', 0.5);
-         setImageData(dataUrl);
-         setPhotoTaken(true);
+        const scale = Math.min(600 / video.videoWidth, 600 / video.videoHeight, 1);
+        canvas.width = video.videoWidth * scale;
+        canvas.height = video.videoHeight * scale;
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.5);
+        setImageData(dataUrl);
+        setPhotoTaken(true);
       }
     }
   };
@@ -130,12 +143,24 @@ function AIFaceAnalysis({ socket, room, isHost, playerName, roomId }) {
 
   const submitPhoto = async () => {
     setMySubmission(true);
+    const shouldShowAd = AD_CONFIG.enableVideoAd && (Math.random() < AD_CONFIG.videoAdProbability);
+
+    const apiPromise = fetch(`${API_URL}/api/ai/submit_face`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ roomId, socketId: socket.id, playerName, imageData, promptId: gameData.prompt, persona: room.state.persona || 'michael', adShown: shouldShowAd })
+    });
+
+    if (shouldShowAd) {
+      try {
+        await showAd();
+      } catch (e) {
+        console.error("Ad error", e);
+      }
+    }
+
     try {
-      await fetch(`${API_URL}/api/ai/submit_face`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roomId, socketId: socket.id, playerName, imageData, promptId: gameData.prompt, persona: room.state.persona || 'michael' })
-      });
+      await apiPromise;
     } catch (e) {
       console.error(e);
       setMySubmission(false);
@@ -146,7 +171,7 @@ function AIFaceAnalysis({ socket, room, isHost, playerName, roomId }) {
   const requestAdditionalDiagnosis = async () => {
     const finalPrompt = selectedPreset === '自由入力' ? additionalPrompt : selectedPreset;
     if (!finalPrompt) return;
-    
+
     setIsAdditionalLoading(true);
     try {
       await fetch(`${API_URL}/api/ai/face_additional`, {
@@ -154,7 +179,7 @@ function AIFaceAnalysis({ socket, room, isHost, playerName, roomId }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ roomId, prompt: finalPrompt, persona: room.state.persona || 'michael' })
       });
-    } catch(e) { console.error(e); }
+    } catch (e) { console.error(e); }
     setIsAdditionalLoading(false);
   };
 
@@ -192,13 +217,13 @@ function AIFaceAnalysis({ socket, room, isHost, playerName, roomId }) {
       return (
         <div className="card center-content animate-pop" style={{ minHeight: '60vh' }}>
           <h2 style={{ marginBottom: '1rem', fontSize: '1.5rem' }}>AIが人相を診断中...</h2>
-          
+
           <div style={{ width: '100%', maxWidth: '400px', backgroundColor: 'var(--white)', padding: '1rem', borderRadius: 'var(--radius-md)', textAlign: 'left', marginTop: '1rem', boxShadow: 'var(--shadow-sm)' }}>
             <h4 style={{ color: 'var(--gray-medium)', marginBottom: '1rem', borderBottom: '1px solid var(--gray-light)', paddingBottom: '0.5rem' }}>プレイヤー進行状況</h4>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
               {waitingList.map((p, i) => (
-                <li 
-                  key={i} 
+                <li
+                  key={i}
                   style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem', fontSize: '1.1rem', cursor: 'pointer', backgroundColor: 'var(--light)', padding: '0.5rem 1rem', borderRadius: '8px', transition: 'all 0.2s' }}
                   onClick={() => setSelectedProfilePlayer(p)}
                   title="プロフィールを見る"
@@ -209,11 +234,11 @@ function AIFaceAnalysis({ socket, room, isHost, playerName, roomId }) {
             </ul>
           </div>
           <div className="loader" style={{ marginTop: '2.5rem' }}></div>
-          
-          <ProfileModal 
-            isOpen={selectedProfilePlayer !== null} 
-            onClose={() => setSelectedProfilePlayer(null)} 
-            player={selectedProfilePlayer} 
+
+          <ProfileModal
+            isOpen={selectedProfilePlayer !== null}
+            onClose={() => setSelectedProfilePlayer(null)}
+            player={selectedProfilePlayer}
           />
         </div>
       );
@@ -222,7 +247,7 @@ function AIFaceAnalysis({ socket, room, isHost, playerName, roomId }) {
     return (
       <div className="card center-content animate-pop">
         <h3 style={{ color: 'var(--gray-medium)', textAlign: 'center' }}>AI採点！〇〇な顔ゲーム</h3>
-        
+
         <div style={{ margin: '1.5rem 0', padding: '1.5rem', backgroundColor: 'var(--light)', borderRadius: 'var(--radius-md)' }}>
           <p style={{ fontWeight: 'bold', color: 'var(--gray-medium)', marginBottom: '0.5rem' }}>以下のお題の顔をして、AIに人相判定させろ！</p>
           <h2 style={{ fontSize: '2rem', color: 'var(--primary)', textAlign: 'center' }}>
@@ -233,13 +258,13 @@ function AIFaceAnalysis({ socket, room, isHost, playerName, roomId }) {
         {!photoTaken ? (
           <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <div style={{ display: 'flex', marginBottom: '1.5rem', borderBottom: '2px solid var(--gray-light)', width: '100%', maxWidth: '400px' }}>
-              <div 
+              <div
                 onClick={() => setUseCamera(true)}
                 style={{ flex: 1, textAlign: 'center', padding: '0.75rem', cursor: 'pointer', fontWeight: 'bold', borderBottom: useCamera ? '3px solid var(--primary)' : 'none', color: useCamera ? 'var(--primary)' : 'var(--gray-medium)', transition: 'all 0.2s', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem' }}
               >
                 <Camera size={18} /> カメラで撮影
               </div>
-              <div 
+              <div
                 onClick={() => setUseCamera(false)}
                 style={{ flex: 1, textAlign: 'center', padding: '0.75rem', cursor: 'pointer', fontWeight: 'bold', borderBottom: !useCamera ? '3px solid var(--primary)' : 'none', color: !useCamera ? 'var(--primary)' : 'var(--gray-medium)', transition: 'all 0.2s', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem' }}
               >
@@ -252,7 +277,7 @@ function AIFaceAnalysis({ socket, room, isHost, playerName, roomId }) {
                 <div style={{ position: 'relative', width: '300px', height: '300px', backgroundColor: '#333', borderRadius: '12px', overflow: 'hidden', marginBottom: '2rem' }}>
                   <video ref={videoRef} autoPlay playsInline style={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)' }} />
                 </div>
-                <button 
+                <button
                   className="btn btn-primary"
                   style={{ padding: '0', borderRadius: '50%', width: '80px', height: '80px', boxShadow: '0 4px 12px rgba(0,0,0,0.3)', display: 'flex', justifyContent: 'center', alignItems: 'center' }}
                   onClick={capturePhoto}
@@ -276,9 +301,9 @@ function AIFaceAnalysis({ socket, room, isHost, playerName, roomId }) {
           <div className="animate-pop" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <h3 style={{ marginBottom: '1rem', textAlign: 'center', color: '#00A699' }}>いい顔ですね！</h3>
             {imageData && (
-               <div style={{ width: '200px', height: '200px', borderRadius: '12px', overflow: 'hidden', marginBottom: '1.5rem', boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
-                  <img src={imageData} alt="Captured" style={{ width: '100%', height: '100%', objectFit: 'cover', transform: useCamera ? 'scaleX(-1)' : 'none' }} />
-               </div>
+              <div style={{ width: '200px', height: '200px', borderRadius: '12px', overflow: 'hidden', marginBottom: '1.5rem', boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
+                <img src={imageData} alt="Captured" style={{ width: '100%', height: '100%', objectFit: 'cover', transform: useCamera ? 'scaleX(-1)' : 'none' }} />
+              </div>
             )}
             <button className="btn btn-primary" onClick={submitPhoto}>AIに診断させる</button>
             <button className="btn btn-secondary" style={{ marginTop: '1rem' }} onClick={() => { setPhotoTaken(false); setImageData(null); }}>撮り直す</button>
@@ -296,7 +321,7 @@ function AIFaceAnalysis({ socket, room, isHost, playerName, roomId }) {
   }
 
   const safeResultsArray = Array.isArray(gameData.results) ? gameData.results : Object.values(gameData.results || {});
-  
+
   return (
     <div className="card animate-pop" style={{ padding: '2rem 1rem' }}>
       <div ref={resultRef} style={{ padding: '1rem', backgroundColor: 'var(--white)', borderRadius: '8px' }}>
@@ -306,9 +331,9 @@ function AIFaceAnalysis({ socket, room, isHost, playerName, roomId }) {
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
           {safeResultsArray.map((res, i) => (
-            <div key={i} style={{ backgroundColor: gameData.phase === 'reveal_tsukkomi' && res.is_war_criminal ? '#FFF5F5' : 'var(--light)', borderRadius: 'var(--radius-md)', border: gameData.phase === 'reveal_tsukkomi' && res.is_war_criminal ? '2px solid #FED7D7' : '2px solid var(--gray-light)', overflow: 'hidden', boxShadow: 'var(--shadow-sm)', position: 'relative' }}>
-              
-              {gameData.phase === 'reveal_tsukkomi' && res.is_war_criminal && (
+            <div key={i} style={{ backgroundColor: res.is_war_criminal ? '#FFF5F5' : 'var(--light)', borderRadius: 'var(--radius-md)', border: res.is_war_criminal ? '2px solid #FED7D7' : '2px solid var(--gray-light)', overflow: 'hidden', boxShadow: 'var(--shadow-sm)', position: 'relative' }}>
+
+              {res.is_war_criminal && (
                 <div style={{ position: 'absolute', top: '10px', right: '10px', backgroundColor: '#E53E3E', color: 'white', padding: '0.5rem 1rem', borderRadius: '100px', fontWeight: 900, fontSize: '1.2rem', transform: 'rotate(15deg)', zIndex: 10, boxShadow: '0 4px 8px rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                   <Skull size={18} /> お題はき違え戦犯！
                 </div>
@@ -317,29 +342,21 @@ function AIFaceAnalysis({ socket, room, isHost, playerName, roomId }) {
               <div style={{ width: '100%', height: '220px', backgroundColor: '#333', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                 <img src={res.imageData} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} alt="face" />
               </div>
-              
+
               <div style={{ padding: '1.5rem' }}>
-                <div style={{ fontWeight: 800, marginBottom: '0.5rem', fontSize: '1.1rem', color: 'var(--gray-dark)' }}>{res.name} の人相診断</div>
-                
+                <div style={{ fontWeight: 800, marginBottom: '0.5rem', fontSize: '1.1rem', color: 'var(--gray-dark)' }}>{res.name} へのツッコミ</div>
+
                 {/* 診断名 */}
                 <div style={{ marginBottom: '1rem' }}>
                   <span style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--primary)', borderBottom: '3px solid var(--primary)', paddingBottom: '0.2rem' }}>
                     {res.diagnosis || "診断不可"}
                   </span>
                 </div>
-                
-                {/* AIの真面目な診断結果 */}
-                <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#fff', borderRadius: '8px', borderLeft: '4px solid var(--primary)' }}>
-                  <p style={{ fontSize: '0.8rem', fontWeight: 'bold', color: 'var(--primary)', margin: '0 0 0.5rem 0', display: 'flex', alignItems: 'center', gap: '0.25rem' }}><Lightbulb size={14} /> プロ診断士によるガチの人相分析</p>
-                  <div className="markdown-body">
-                    <ReactMarkdown>{res.professional_comment || res.comment || '解析エラー'}</ReactMarkdown>
-                  </div>
-                </div>
 
                 {/* お題に対するAIのツッコミ */}
-                {gameData.phase === 'reveal_tsukkomi' && res.roast_comment && (
+                {res.roast_comment && (
                   <div className="animate-pop" style={{ padding: '1rem', backgroundColor: '#fff5f5', borderRadius: '8px', border: '1px dashed #E53E3E' }}>
-                    <p style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#E53E3E', margin: '0 0 0.5rem 0', display: 'flex', alignItems: 'center', gap: '0.25rem' }}><Flame size={14} /> お題に対してのツッコミ</p>
+                    <p style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#E53E3E', margin: '0 0 0.5rem 0', display: 'flex', alignItems: 'center', gap: '0.25rem' }}><Flame size={14} /> 司会からの愛あるツッコミ</p>
                     <div className="markdown-body">
                       <ReactMarkdown>{res.roast_comment}</ReactMarkdown>
                     </div>
@@ -363,29 +380,19 @@ function AIFaceAnalysis({ socket, room, isHost, playerName, roomId }) {
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'center', marginTop: '1.5rem' }}>
-         <button className="btn btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }} onClick={downloadImageResult}><Save size={16} /> 画像をローカルに保存する</button>
+        <button className="btn btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }} onClick={downloadImageResult}><Save size={16} /> 画像をローカルに保存する</button>
       </div>
 
-      <hr style={{ margin: '2rem 0', borderColor: 'var(--gray-light)' }}/>
+      <hr style={{ margin: '2rem 0', borderColor: 'var(--gray-light)' }} />
 
       {isHost && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', alignItems: 'center' }}>
-          
-          {gameData.phase === 'reveal' && (
-            <button 
-              className="btn btn-primary animate-pulse" 
-              style={{ backgroundColor: '#111', border: '5px solid #E53E3E', fontSize: '1.25rem', fontWeight: 900, padding: '1rem', width: '100%', maxWidth: '600px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
-              onClick={() => socket.emit('update_game_state', { roomId, payload: { gameData: { ...gameData, phase: 'reveal_tsukkomi' } } })}
-            >
-              <Play fill="currentColor" size={24} /> ツッコミ＆戦犯発表！
-            </button>
-          )}
 
-          {gameData.phase === 'reveal_tsukkomi' && (
+          {gameData.phase === 'reveal' && (
             <>
               <div style={{ width: '100%', maxWidth: '600px', padding: '1.5rem', backgroundColor: 'var(--light)', borderRadius: '8px', border: '1px dashed var(--gray-medium)' }}>
                 <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.5rem' }}>グループへの追加診断</label>
-                <select 
+                <select
                   className="input-field"
                   value={selectedPreset}
                   onChange={(e) => setSelectedPreset(e.target.value)}
@@ -395,20 +402,20 @@ function AIFaceAnalysis({ socket, room, isHost, playerName, roomId }) {
                     <option key={idx} value={preset}>{preset}</option>
                   ))}
                 </select>
-                
+
                 {selectedPreset === '自由入力' && (
-                  <input 
-                    className="input-field" 
-                    value={additionalPrompt} 
+                  <input
+                    className="input-field"
+                    value={additionalPrompt}
                     onChange={e => setAdditionalPrompt(e.target.value)}
                     placeholder="自由にプロンプトを入力してください"
                     style={{ marginBottom: '1.5rem' }}
                   />
                 )}
-                
-                <button 
-                  className="btn btn-primary" 
-                  onClick={requestAdditionalDiagnosis} 
+
+                <button
+                  className="btn btn-primary"
+                  onClick={requestAdditionalDiagnosis}
                   disabled={isAdditionalLoading || (selectedPreset === '自由入力' && !additionalPrompt)}
                 >
                   {isAdditionalLoading ? 'AI考え中...' : '追加診断をリクエスト'}

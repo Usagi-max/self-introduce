@@ -4,6 +4,7 @@ import { QRCodeCanvas } from 'qrcode.react';
 import Roulette from './Games/Roulette';
 import Unanimous from './Games/Unanimous';
 import AICompatibility from './Games/AICompatibility';
+import PhysiognomyIntro from './Games/PhysiognomyIntro';
 import AIFaceAnalysis from './Games/AIFaceAnalysis';
 import Penalty from './Penalty/Penalty';
 import RouletteSetup from './Games/RouletteSetup';
@@ -310,6 +311,9 @@ function Room({ socket, room, isHost, playerName }) {
             <button className="btn btn-secondary" style={{ marginBottom: '0.75rem' }} onClick={() => handleStartGame('compatibility')}>
               AI相性診断ゲーム
             </button>
+            <button className="btn btn-secondary" style={{ marginBottom: '0.75rem' }} onClick={() => handleStartGame('physiognomy_intro')}>
+              人相診断自己紹介ゲーム
+            </button>
             <button className="btn btn-secondary" style={{ marginBottom: '1.5rem' }} onClick={() => handleStartGame('face_analysis')}>
               AI採点！〇〇な顔ゲーム
             </button>
@@ -354,6 +358,9 @@ function Room({ socket, room, isHost, playerName }) {
       )}
       {room.state.game === 'compatibility' && (
         <AICompatibility socket={socket} room={room} isHost={isHost} playerName={playerName} roomId={roomId} />
+      )}
+      {room.state.game === 'physiognomy_intro' && (
+        <PhysiognomyIntro socket={socket} room={room} isHost={isHost} playerName={playerName} roomId={roomId} />
       )}
       {room.state.game === 'face_analysis' && (
         <AIFaceAnalysis socket={socket} room={room} isHost={isHost} playerName={playerName} roomId={roomId} />

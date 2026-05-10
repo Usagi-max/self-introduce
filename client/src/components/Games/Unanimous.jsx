@@ -3,10 +3,46 @@ import { PartyPopper, XCircle, Users, UserPlus } from 'lucide-react';
 import ProfileModal from '../ProfileModal';
 
 const QUESTIONS = [
-  '赤い果物といえば？',
-  '冬のスポーツといえば？',
-  '朝ごはんの定番といえば？',
-  'ドラえもんの秘密道具といえば？'
+  'ばかを別の言葉で言い換えると？',
+  'ぬから始まる子供が好きなものといえば？',
+  '正体を隠す職業といえば？',
+  'まから始まるおやつといえば？',
+  'やめられないお菓子といえば？',
+  'なんとなく怖い職業といえば？',
+  '地味にかっこいい職業といえば？',
+  'ちょっと怪しい職業といえば？',
+  '一番テンションが上がる食べ物といえば？',
+  'モテる部活動といえば？',
+  'お金がかかる趣味といえば？',
+  'モテる趣味といえば？',
+  '危険なスポーツといえば？',
+  '朝に食べたいものといえば？',
+  '夜に食べたいものといえば？',
+  '飲み会の締めといえば？',
+  '二次会でやることといえば？',
+  '雨の日デートといえば？',
+  'コンビニでつい買うものといえば？',
+  'スーパーで安いものといえば？',
+  '冷蔵庫に常にあるものといえば？',
+  '毎日使うアプリといえば？',
+  '寝る前にやることといえば？',
+  '朝起きて最初にやることといえば？',
+  '暇なときにやることといえば？',
+  '健康に良い習慣といえば？',
+  '美容で大事なことといえば？',
+  '第一印象で大事なことといえば？',
+  '別れる原因といえば？',
+  '高級な食べ物といえば？',
+  'お正月にやることといえば？',
+  'すから始まる夏から連想する言葉といえば？',
+  'おから始まる冬から連想する言葉といえば？',
+  'まから始まる怖いものといえば？',
+  '幽霊の特徴といえば？',
+  'かから始まる人生で大切なものといえば？',
+  'きから始まる人生で大切なものといえば？',
+  'こから始まる人生で大切なものといえば？',
+  'ねから始まる人生で大切なものといえば？',
+  '〇〇さんがすきそうな季節といえば？',
 ];
 
 function Unanimous({ socket, room, isHost, playerName, roomId }) {
@@ -22,7 +58,7 @@ function Unanimous({ socket, room, isHost, playerName, roomId }) {
     setMySubmission(false);
     setAnswer('');
   }, [gameData.question]);
-  
+
   const setupGame = () => {
     socket.emit('update_game_state', {
       roomId,
@@ -49,15 +85,15 @@ function Unanimous({ socket, room, isHost, playerName, roomId }) {
     const allAnswers = Object.values(gameData.answers).map(a => a.text);
     const counts = {};
     allAnswers.forEach(a => counts[a] = (counts[a] || 0) + 1);
-    
+
     let maxCount = 0;
-    Object.values(counts).forEach(c => { if(c > maxCount) maxCount = c; });
-    
+    Object.values(counts).forEach(c => { if (c > maxCount) maxCount = c; });
+
     const penalizedIds = [];
     Object.entries(gameData.answers).forEach(([pid, ans]) => {
       // penalized if they don't belong to the majority answer, or if NO majority (maxCount=1)
       if (counts[ans.text] !== maxCount || maxCount === 1) {
-         penalizedIds.push(pid);
+        penalizedIds.push(pid);
       }
     });
     setPenalizedPlayerIds(penalizedIds);
@@ -75,24 +111,24 @@ function Unanimous({ socket, room, isHost, playerName, roomId }) {
   const confirmScores = (isStrictAuto = false) => {
     let idsToSave = [];
     let minorityIds = [];
-    
+
     if (isStrictAuto) {
       const allAnswers = Object.values(gameData.answers).map(a => a.text);
       const counts = {};
       allAnswers.forEach(a => counts[a] = (counts[a] || 0) + 1);
       let maxCount = 0;
-      Object.values(counts).forEach(c => { if(c > maxCount) maxCount = c; });
+      Object.values(counts).forEach(c => { if (c > maxCount) maxCount = c; });
       Object.entries(gameData.answers).forEach(([pid, ans]) => {
         if (counts[ans.text] === maxCount && maxCount > 1) idsToSave.push(pid);
       });
       const isUnanimous = Object.values(gameData.answers).every(a => a.text === Object.values(gameData.answers)[0].text);
       if (isUnanimous) idsToSave = Object.keys(gameData.answers);
-      
+
       minorityIds = Object.keys(gameData.answers).filter(pid => !idsToSave.includes(pid));
     } else {
       minorityIds = penalizedPlayerIds;
     }
-    
+
     minorityIds.forEach(pid => {
       const p = room.players.find(x => x.id === pid);
       if (p) {
@@ -116,10 +152,10 @@ function Unanimous({ socket, room, isHost, playerName, roomId }) {
   const nextRound = () => {
     setMySubmission(false);
     setAnswer('');
-    
+
     let newIdx = (gameData.chooserIndex || 0) + 1;
     let newRound = gameData.round || 1;
-    
+
     if (newIdx >= room.players.length) {
       newIdx = 0;
       newRound++;
@@ -162,18 +198,18 @@ function Unanimous({ socket, room, isHost, playerName, roomId }) {
               }}>{q}</button>
             ))}
           </div>
-          
+
           <div style={{ padding: '1.5rem', backgroundColor: 'var(--light)', borderRadius: '8px' }}>
             <p style={{ marginBottom: '0.5rem', fontWeight: 'bold' }}>自分で好きなお題を入力する:</p>
-            <input 
-              className="input-field" 
-              placeholder="例: 無人島に一つだけ持っていくなら？" 
-              value={customPrompt} 
-              onChange={e => setCustomPrompt(e.target.value)} 
+            <input
+              className="input-field"
+              placeholder="例: 無人島に一つだけ持っていくなら？"
+              value={customPrompt}
+              onChange={e => setCustomPrompt(e.target.value)}
             />
-            <button 
-              className="btn btn-primary" 
-              style={{ width: '100%' }} 
+            <button
+              className="btn btn-primary"
+              style={{ width: '100%' }}
               disabled={!customPrompt.trim()}
               onClick={() => {
                 socket.emit('update_game_state', { roomId, payload: { gameData: { ...gameData, question: customPrompt.trim(), phase: 'input' } } });
@@ -201,7 +237,7 @@ function Unanimous({ socket, room, isHost, playerName, roomId }) {
   if (gameData.phase === 'input') {
     const answeredCount = Object.keys(gameData.answers || {}).length;
     const activeCount = room.players.filter(p => p.connected).length;
-    
+
     if (mySubmission) {
       return (
         <div className="card center-content animate-pop" style={{ minHeight: '60vh' }}>
@@ -209,15 +245,15 @@ function Unanimous({ socket, room, isHost, playerName, roomId }) {
           <div style={{ fontSize: '3rem', fontWeight: 900, color: 'var(--primary)', marginBottom: '1rem' }}>
             {Math.max(0, activeCount - answeredCount)}人 待ち
           </div>
-          
+
           <div style={{ width: '100%', maxWidth: '400px', marginBottom: '2rem', textAlign: 'left' }}>
             <h4 style={{ color: 'var(--gray-dark)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Users size={18} /> 参加プレイヤーのプロフィール</h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
               {room.players.map(p => {
                 const hasAnswered = !!gameData.answers?.[p.id];
                 return (
-                  <div 
-                    key={p.id} 
+                  <div
+                    key={p.id}
                     style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 1rem', backgroundColor: hasAnswered ? '#f0fffd' : '#fff', borderRadius: '8px', border: hasAnswered ? '1px solid var(--primary)' : '1px solid var(--gray-light)', cursor: 'pointer', transition: 'all 0.2s' }}
                     onClick={() => setSelectedProfilePlayer(p)}
                   >
@@ -230,17 +266,17 @@ function Unanimous({ socket, room, isHost, playerName, roomId }) {
               })}
             </div>
           </div>
-          
+
           <div style={{ marginTop: '1rem' }}>
             <p style={{ color: 'var(--gray-medium)', fontSize: '0.875rem' }}>
               周りの人に「早く〜！」とプレッシャーをかけよう！
             </p>
           </div>
 
-          <ProfileModal 
-            isOpen={selectedProfilePlayer !== null} 
-            onClose={() => setSelectedProfilePlayer(null)} 
-            player={selectedProfilePlayer} 
+          <ProfileModal
+            isOpen={selectedProfilePlayer !== null}
+            onClose={() => setSelectedProfilePlayer(null)}
+            player={selectedProfilePlayer}
           />
         </div>
       );
@@ -254,16 +290,16 @@ function Unanimous({ socket, room, isHost, playerName, roomId }) {
         </h2>
 
         <div className="input-group">
-          <input 
+          <input
             className="input-field"
-            type="text" 
+            type="text"
             placeholder="あなたの回答"
             value={answer}
             onChange={(e) => setAnswer(e.target.value)}
           />
         </div>
 
-        <button 
+        <button
           className="btn btn-primary"
           onClick={submitAnswer}
           disabled={!answer.trim()}
@@ -276,21 +312,21 @@ function Unanimous({ socket, room, isHost, playerName, roomId }) {
 
   // phase === 'reveal'
   const isUnanimous = Object.values(gameData.answers).length > 0 && Object.values(gameData.answers).every(a => a.text === Object.values(gameData.answers)[0].text);
-  
+
   // スマホなどでもプレビューするための自動判定計算
   const autoCounts = {};
   Object.values(gameData.answers || {}).forEach(a => autoCounts[a.text] = (autoCounts[a.text] || 0) + 1);
   let maxCount = 0;
-  Object.values(autoCounts).forEach(c => { if(c > maxCount) maxCount = c; });
+  Object.values(autoCounts).forEach(c => { if (c > maxCount) maxCount = c; });
 
   return (
     <div className="card center-content animate-pop">
       <h3 style={{ color: 'var(--gray-medium)' }}>お題</h3>
       <h2 style={{ fontSize: '1.5rem', marginBottom: '2rem' }}>{gameData.question}</h2>
 
-      <div style={{ 
-        fontSize: '2rem', 
-        fontWeight: 900, 
+      <div style={{
+        fontSize: '2rem',
+        fontWeight: 900,
         color: isUnanimous ? '#00A699' : '#FF5A5F',
         marginBottom: '2rem',
         animation: 'popIn 0.5s ease-out'
@@ -302,34 +338,34 @@ function Unanimous({ socket, room, isHost, playerName, roomId }) {
         {Object.entries(gameData.answers).map(([pid, ans]) => {
           const isPenalizedAuto = (autoCounts[ans.text] !== maxCount || maxCount === 1) && !isUnanimous;
           const isPenalized = gameData.scoredThisRound ? (gameData.finalPenalizedIds || []).includes(pid) : (evalMode ? penalizedPlayerIds.includes(pid) : isPenalizedAuto);
-          
+
           return (
-          <div key={pid} style={{ 
-             display: 'flex', 
-             justifyContent: 'space-between',
-             padding: '1rem',
-             borderBottom: '1px solid var(--gray-light)',
-             alignItems: 'center',
-             backgroundColor: isPenalized ? '#fff5f5' : '#f0fff4'
-          }}>
-            <span style={{ fontWeight: 600 }}>
-              {evalMode && !gameData.scoredThisRound && isHost && (
-                <input 
-                  type="checkbox" 
-                  checked={isPenalized}
-                  onChange={() => togglePenalizedPlayer(pid)}
-                  style={{ marginRight: '0.75rem', transform: 'scale(1.5)' }}
-                />
-              )}
-              {ans.name}
-              {(gameData.scoredThisRound || !isUnanimous) && (
-                <span style={{ fontSize: '0.75rem', marginLeft: '0.5rem', color: isPenalized ? '#E53E3E' : '#38A169' }}>
-                  {isPenalized ? '(戦犯)' : '(セーフ)'}
-                </span>
-              )}
-            </span>
-            <span style={{ fontSize: '1.25rem', fontWeight: 800 }}>{ans.text}</span>
-          </div>
+            <div key={pid} style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              padding: '1rem',
+              borderBottom: '1px solid var(--gray-light)',
+              alignItems: 'center',
+              backgroundColor: isPenalized ? '#fff5f5' : '#f0fff4'
+            }}>
+              <span style={{ fontWeight: 600 }}>
+                {evalMode && !gameData.scoredThisRound && isHost && (
+                  <input
+                    type="checkbox"
+                    checked={isPenalized}
+                    onChange={() => togglePenalizedPlayer(pid)}
+                    style={{ marginRight: '0.75rem', transform: 'scale(1.5)' }}
+                  />
+                )}
+                {ans.name}
+                {(gameData.scoredThisRound || !isUnanimous) && (
+                  <span style={{ fontSize: '0.75rem', marginLeft: '0.5rem', color: isPenalized ? '#E53E3E' : '#38A169' }}>
+                    {isPenalized ? '(戦犯)' : '(セーフ)'}
+                  </span>
+                )}
+              </span>
+              <span style={{ fontSize: '1.25rem', fontWeight: 800 }}>{ans.text}</span>
+            </div>
           );
         })}
       </div>
@@ -349,8 +385,8 @@ function Unanimous({ socket, room, isHost, playerName, roomId }) {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', border: '1px solid var(--primary)', padding: '1rem', borderRadius: '8px', backgroundColor: '#fff5f5' }}>
               <p style={{ color: '#E53E3E', fontWeight: 'bold' }}>
-                お題に沿っていない人（戦犯）を上のリストでチェックしてください。<br/>
-                <span style={{fontSize: '0.875rem', color: 'var(--gray-dark)'}}>※ もし誰も一致しなかった場合は話し合って一番酷い人を選んでください。</span>
+                お題に沿っていない人（戦犯）を上のリストでチェックしてください。<br />
+                <span style={{ fontSize: '0.875rem', color: 'var(--gray-dark)' }}>※ もし誰も一致しなかった場合は話し合って一番酷い人を選んでください。</span>
               </p>
               <button className="btn btn-primary" onClick={() => confirmScores(false)}>
                 チェックした内容で結果確定

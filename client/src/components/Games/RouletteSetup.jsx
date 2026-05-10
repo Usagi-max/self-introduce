@@ -2,13 +2,13 @@ import React, { useState } from 'react';
 import { Star, Beer, Building2, Plus, X, Save, Ban } from 'lucide-react';
 
 const DEFAULT_PRESETS = [
-  { icon: <Star size={14} />, name: '定番', topics: ['出身地', '血液型', '好きな食べ物', 'マイブーム', '趣味', '休日の過ごし方'] },
-  { icon: <Beer size={14} />, name: '飲み会・合コン', topics: ['初恋の思い出', '最近のやらかし', '誰にも言えない秘密', 'フェチ', '一番のエピソード', '好きなタイプ'] },
-  { icon: <Building2 size={14} />, name: 'ビジネスアイスブレイク', topics: ['今年挑戦したいこと', '最近買った高いもの', '子供の頃の夢', '尊敬する人', '自分を動物に例えると', '最近の小さな幸せ'] }
+  { icon: <Star size={14} />, name: '定番', topics: ['出身地のちょっと変わったところ', '自分と相性の良い血液型/MBTI', '好きな食べ物とお気に入りの店', '一番最近始めた趣味', '最近いいねした動画', '最近の小さな幸せ'] },
+  { icon: <Beer size={14} />, name: '恋愛', topics: ['初恋の思い出', '最近付き合った人', '好きなタイプ・芸能人'] },
+  { icon: <Building2 size={14} />, name: 'ビジネス', topics: ["今の仕事の楽しいところ/大変なところ", '今年挑戦したいこと', '最近買った高いもの', '子供の頃の夢', '尊敬する人', "100万円あったらやってみたいこと"] }
 ];
 
 const COMMON_TOPICS = [
-  '長所と短所', '座右の銘', '好きな映画', 'もし100万円あったら', 'ストレス発散法', '今まで一番痛かったこと', '無人島に一つだけ持っていくなら', 'タイムトラベルできるならいつ？', 'ここだけの話'
+  '長所と短所', '好きな映画/アニメ/ドラマ', 'もし100万円あったら', 'ストレス発散法', 'タイムトラベルできるならいつ？'
 ];
 
 export default function RouletteSetup({ socket, room, roomId, forceOpen, onSaved }) {
@@ -74,12 +74,12 @@ export default function RouletteSetup({ socket, room, roomId, forceOpen, onSaved
   return (
     <div style={{ marginBottom: '1.5rem', backgroundColor: 'var(--light)', padding: '1rem', borderRadius: 'var(--radius-md)', animation: 'slideUp 0.3s ease-out' }}>
       <h4 style={{ marginBottom: '1rem', color: 'var(--dark)' }}>ルーレットのカスタマイズ</h4>
-      
+
       <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', paddingBottom: '0.5rem', marginBottom: '1rem' }}>
         {DEFAULT_PRESETS.map((preset, i) => (
-          <button 
-            key={i} 
-            className="btn btn-secondary" 
+          <button
+            key={i}
+            className="btn btn-secondary"
             style={{ whiteSpace: 'nowrap', padding: '0.4rem 0.75rem', fontSize: '0.75rem', backgroundColor: 'var(--white)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
             onClick={() => applyPreset(preset.topics)}
           >
@@ -89,10 +89,10 @@ export default function RouletteSetup({ socket, room, roomId, forceOpen, onSaved
       </div>
 
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
-        <input 
-          type="text" 
-          className="input-field" 
-          placeholder="新しいお題を入力..." 
+        <input
+          type="text"
+          className="input-field"
+          placeholder="新しいお題を入力..."
           value={newTopicInput}
           onChange={(e) => setNewTopicInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleAddTopic()}
@@ -105,12 +105,12 @@ export default function RouletteSetup({ socket, room, roomId, forceOpen, onSaved
         <p style={{ fontSize: '0.75rem', color: 'var(--gray-medium)', marginBottom: '0.5rem' }}>よく使われるお題（タップで追加）</p>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
           {COMMON_TOPICS.map((t, i) => (
-            <button 
-              key={i} 
+            <button
+              key={i}
               onClick={() => handleAddTopic(t)}
               disabled={tempTopics.includes(t)}
-              style={{ 
-                fontSize: '0.75rem', padding: '0.2rem 0.5rem', borderRadius: '4px', border: '1px solid var(--gray-light)', 
+              style={{
+                fontSize: '0.75rem', padding: '0.2rem 0.5rem', borderRadius: '4px', border: '1px solid var(--gray-light)',
                 backgroundColor: tempTopics.includes(t) ? 'var(--gray-light)' : 'var(--white)',
                 color: tempTopics.includes(t) ? 'var(--gray-medium)' : 'var(--dark)',
                 cursor: tempTopics.includes(t) ? 'default' : 'pointer',

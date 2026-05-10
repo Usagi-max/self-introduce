@@ -43,30 +43,45 @@ Markdownのコードブロックは使わず、直接JSONのみを出力して�
 彼らの性格を分析した上で、このグループ全体がお題にどう立ち向かうか、どのような役割分担になるか、誰がどうなるかなどを面白おかしく解説してください。
 出力はJSONではなく通常の自由な文章（改行やMarkdownあり）ですが、必ず**小見出し（### など）**を付けて読みやすい構成にしてください。`;
     } else if (type === 'face_analysis') {
+      systemPrompt = `あなたは「人相学を極めたプロフェッショナルな人相診断士」ですが、今回はお題に沿った顔ができているかを判定し、ツッコミを入れる役目です。
+ユーザーは「${promptText}」というお題の顔のつもりで写真を送ってきています。
+
+以下の前提を必ず守るようにしてください：
+・その場の「表情」や顔の筋肉、骨格を見極めて判定してください。
+・【超重要】このお題に対してあえてこの顔（表情）を作ったことから、そのプレイヤーの普段の人格、思考回路、ユーモアセンスなどを深読み・類推して、面白おかしくツッコミに含めてください。（例：「こんな顔してアピールするってことは、普段からいじられキャラを狙ってるな？」「あえて真顔を作ったところに、サイコパス的な思考回路が垣間見えるぜ」等）
+・【超重要】お題に対して、例えツッコミ（「それじゃ〇〇な顔っていうより〇〇な顔だぜ」等）を必ず入れてください。
+・【超重要】お題に合っている（戦犯ではない）場合も、「〇〇くらい〇〇な顔してる！」のように例えを用いて大げさに強調して褒めてください。
+
+【出力形式の厳守】
+結果は必ず以下のJSON形式でのみ出力してください。JSONブロック以外のテキストは一切含めないでください。
+"roast_comment" の長文は、改行記号(\\n)を使って適切に段落を分け、**適宜小見出し（### など）**を含めてください。
+
+【各項目の仕様】
+- diagnosis: キャッチーな診断名（お題に対する判定名）
+- roast_comment: お題に対する例えツッコミや大げさな褒め言葉（キャラクター人格適用）
+- is_war_criminal: ブール値（true または false）。画像に写っている表情が、「${promptText}」というお題から明らかに逸脱していて、全く見当違いな顔（つまり「戦犯」）である場合は true を指定してください。少しでもお題に近い顔をしていれば false を指定してください。厳しく判定してください。
+
+{
+  "diagnosis": "〇〇な顔",
+  "roast_comment": "### お題「${promptText}」へのツッコミ\\n...",
+  "is_war_criminal": false
+}`;
+    } else if (type === 'physiognomy_intro') {
       systemPrompt = `あなたは「人相学を極め、採用・育成・配置・マネジメントを長年行ってきたプロフェッショナルな人相診断士」です。少しおせっかいですが、本質を突きます。
+ユーザーの顔写真から、その人の性格や向き・不向きをガチで診断してください。この診断結果を使って、ユーザーが後で自己紹介（答え合わせ）をするための材料になります。
+
 以下の前提を必ず守るようにしてください：
 ・占い的断定や性格の決めつけはしない
 ・善悪や優劣ではなく「向き・不向き・事故予防」の視点で語る
 ・その場の「表情」に惑わされず、顔の筋肉の発達具合や骨格を注意深く見極めて、本気でプロの診断を行ってください。
 ・顔は「無意識に選び続けてきた行動・態度の履歴」として読み解いてください。
 
-また、ユーザーは「${promptText}」というお題の顔のつもりで写真を送ってきています。
-
 【出力形式の厳守】
 結果は必ず以下のJSON形式でのみ出力してください。JSONブロック以外のテキストは一切含めないでください。
-"professional_comment" や "roast_comment" の長文は、改行記号(\\n)を使って適切に段落を分け、**適宜小見出し（### など）**を含めてください。
-
-【各項目の仕様】
-- diagnosis: キャッチーな診断名
-- professional_comment: 真面目で専門的な分析
-- roast_comment: お題に対するツッコミ（キャラクター人格適用）
-- is_war_criminal: ブール値（true または false）。画像に写っている表情が、「${promptText}」というお題から明らかに逸脱していて、全く見当違いな顔（つまり「戦犯」）である場合は true を指定してください。少しでもお題に近い顔をしていれば false を指定してください。厳しく判定してください。
 
 {
-  "diagnosis": "〇〇な顔",
-  "professional_comment": "### 総評\\n... \\n### 顔の部位別無意識の選択傾向\\n... \\n### どういう人・集団にいると生き生きするか\\n... \\n### 周りの人から誤解されがちなこと\\n...",
-  "roast_comment": "### お題「${promptText}」へのツッコミ\\n...",
-  "is_war_criminal": false
+  "diagnosis": "キャッチーな診断名（〇〇な人）",
+  "professional_comment": "### 総評\\n... \\n### 顔の部位別無意識の選択傾向\\n... \\n### どういう人・集団にいると生き生きするか\\n... \\n### 周りの人から誤解されがちなこと\\n..."
 }`;
     } else if (type === 'face_additional') {
       systemPrompt = `あなたは辛口でユーモアのある人間関係アナリストです。ユーザーから、メンバーの「これまでの顔診断結果」と「新しいお題（例：RPGのパーティを組むなら？）」が送られてきます。
@@ -89,13 +104,15 @@ Markdownのコードブロックは使わず、直接JSONのみを出力して�
     personaInstruction += "\n\n【重要事項】出力するJSON内の診断結果のタイトル（theme, diagnosis）や、詳細テキスト（details, roast_comment, professional_comment内など）の『小見出し（### など）』にも、あなたのキャラクターに合ったセリフチックな表現を必ず使用してください。（例：ギャルの場合「### 〇〇ぶち上げっしょ！」「theme: 〇〇えぐいて〜ｗ」、オネエの場合「### アンタたち最高じゃない♡」など）";
     
     if (type === 'face_analysis') {
-      systemPrompt += `\n\n【キャラクター設定と口調の制限（超重要）】\n"professional_comment" (人相診断結果) を記述する際は、プロの専門家として**完全に真面目で丁寧な口調**を維持してください。ふざけたキャラクターの口調は絶対に混ぜないでください。\n一方で、"roast_comment" (お題へのツッコミ) を記述する際のみ、以下のキャラクター設定を全開にして記述してください。\n\n[ツッコミ専用キャラクター設定]\n${personaInstruction}`;
+      systemPrompt += `\n\n【キャラクター設定と口調（超重要）】\n"roast_comment" (お題へのツッコミ) を記述する際は、以下のキャラクター設定を全開にして記述してください。\n\n[ツッコミ専用キャラクター設定]\n${personaInstruction}`;
+    } else if (type === 'physiognomy_intro') {
+      systemPrompt += `\n\n【キャラクター設定と口調の制限（超重要）】\nプロの専門家として**完全に真面目で丁寧な口調**を維持してください。ふざけたキャラクターの口調は絶対に混ぜないでください。（ただしタイトル部分のみ少しキャッチーにして構いません）`;
     } else {
       systemPrompt += `\n\n【ロールプレイの徹底】\n${personaInstruction}`;
     }
 
     let contents;
-    if (type === 'face_analysis' && imageData) {
+    if ((type === 'face_analysis' || type === 'physiognomy_intro') && imageData) {
       const base64Data = imageData.replace(/^data:image\/\w+;base64,/, "");
       const mimeType = imageData.match(/^data:(image\/\w+);base64,/)?.[1] || "image/jpeg";
       contents = [
@@ -118,7 +135,7 @@ Markdownのコードブロックは使わず、直接JSONのみを出力して�
         const ai = new GoogleGenAI({ apiKey: selectedKey });
 
         const reqConfig = { systemInstruction: systemPrompt };
-        if (['compatibility', 'compatibility_pair', 'face_analysis'].includes(type)) {
+        if (['compatibility', 'compatibility_pair', 'face_analysis', 'physiognomy_intro'].includes(type)) {
           reqConfig.responseMimeType = "application/json";
         }
 

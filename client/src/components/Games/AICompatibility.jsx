@@ -387,18 +387,42 @@ function AICompatibility({ socket, room, isHost, playerName, roomId }) {
           </div>
           <div className="loader" style={{ marginTop: '2rem', marginBottom: '3rem' }}></div>
           
-          {/* 追加：プレイヤー一覧表示 */}
-          <div style={{ width: '100%', maxWidth: '400px', marginBottom: '3rem', textAlign: 'left' }}>
-            <h4 style={{ color: 'var(--gray-dark)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Users size={18} /> 参加プレイヤーのプロフィール</h4>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          {/* 追加：プレイヤー一覧表示（スワイプ可能カード群） */}
+          <div style={{ width: '100%', marginBottom: '3rem', textAlign: 'left' }}>
+            <h4 style={{ color: 'var(--gray-dark)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'center' }}><Users size={18} /> 参加プレイヤーのプロフィール（フリックで確認）</h4>
+            <div style={{ 
+              display: 'flex', 
+              gap: '1rem', 
+              overflowX: 'auto', 
+              scrollSnapType: 'x mandatory',
+              paddingBottom: '1rem',
+              WebkitOverflowScrolling: 'touch',
+              scrollbarWidth: 'none' /* Firefox */
+            }}>
               {room.players.map(p => (
                 <div 
                   key={p.id} 
-                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 1rem', backgroundColor: '#fff', borderRadius: '8px', border: '1px solid var(--gray-light)', cursor: 'pointer', transition: 'all 0.2s' }}
+                  style={{ 
+                    flex: '0 0 80%',
+                    maxWidth: '300px',
+                    scrollSnapAlign: 'center',
+                    backgroundColor: '#fff', 
+                    borderRadius: '12px', 
+                    border: '1px solid var(--gray-light)', 
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+                    padding: '1.5rem',
+                    cursor: 'pointer', 
+                    transition: 'all 0.2s',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem'
+                  }}
                   onClick={() => setSelectedProfilePlayer(p)}
                 >
-                  <span style={{ fontWeight: 'bold' }}>{p.name} {p.id === socket.id && '(あなた)'}</span>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}><UserPlus size={14} /> 見る</span>
+                  <span style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>{p.name} {p.id === socket.id && '(あなた)'}</span>
+                  <span style={{ fontSize: '0.9rem', color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '0.25rem', marginTop: '0.5rem', padding: '0.5rem 1rem', backgroundColor: '#e6f7f5', borderRadius: '100px' }}><UserPlus size={14} /> プロフィールを見る</span>
                 </div>
               ))}
             </div>
@@ -679,6 +703,16 @@ function AICompatibility({ socket, room, isHost, playerName, roomId }) {
           <button className="btn btn-primary" onClick={spinRoulette} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
             次のペアを診断する <Target size={18} />
           </button>
+          
+          <button className="btn btn-secondary" onClick={() => {
+            socket.emit('update_game_state', { 
+              roomId, 
+              payload: { gameData: { ...gameData, testedPairs: [] } } 
+            });
+          }} style={{ backgroundColor: '#fff', color: 'var(--primary)', border: '2px solid var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+            <RefreshCw size={18} /> もう一巡しますか？（履歴リセット）
+          </button>
+
           <button className="btn btn-secondary" onClick={() => {
             socket.emit('update_game_state', { roomId, payload: { status: 'lobby', game: null } });
           }}>

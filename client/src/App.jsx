@@ -4,7 +4,7 @@ import { io } from 'socket.io-client'
 
 import Home from './components/Home'
 import Room from './components/Room'
-import AdBanner from './components/Ads/AdBanner'
+import BannerAd from './components/BannerAd'
 
 // Use environment variable for backend URL in production, fallback to localhost for development
 const SOCKET_SERVER_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001').replace(/\/$/, "");
@@ -141,9 +141,10 @@ function App() {
               window.location.href = '/';
             }
           }}
-          style={{ cursor: 'pointer' }}
+          style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
         >
-          自己紹介ゲーム
+          <img src="/AiBアイコン.png" alt="AiB Icon" style={{ width: '32px', height: '32px', objectFit: 'contain' }} />
+          アイブレ
         </div>
       </header>
       <Routes>
@@ -170,7 +171,7 @@ function App() {
         />
         <Route path="/register" element={<Register />} />
       </Routes>
-      <AdBanner />
+      <BannerAd />
     </>
   )
 }
