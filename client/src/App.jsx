@@ -143,8 +143,11 @@ function App() {
           }}
           style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
         >
-          <img src="/AiBアイコン.png" alt="AiB Icon" style={{ width: '32px', height: '32px', objectFit: 'contain' }} />
-          アイブレ
+          <img src="/AiBアイコン.png" alt="AiB Icon" style={{ width: '36px', height: '36px', objectFit: 'contain' }} />
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.4rem' }}>
+            <span style={{ fontFamily: '"Zen Maru Gothic", sans-serif', fontWeight: 900, fontSize: '1.7rem', letterSpacing: '-0.02em', color: 'var(--primary)' }}>アイブレ</span>
+            <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.8rem', color: 'var(--gray-medium)', fontWeight: 800, letterSpacing: '0.02em' }}>-AI ice Break-</span>
+          </div>
         </div>
       </header>
       <Routes>
