@@ -5,9 +5,10 @@ import { Play } from 'lucide-react';
 function Roulette({ socket, room, isHost, playerName, roomId }) {
   const topics = room.state.rouletteTopics || ['お題が見つかりません'];
   const gameData = room.state.gameData || { phase: 'setup', spinning: false, resultTopic: '', resultPlayer: null };
-  
+
   const [spinText, setSpinText] = useState('???');
   const [targetIds, setTargetIds] = useState([]);
+  const [selectedTopic, setSelectedTopic] = useState('ランダム');
 
   useEffect(() => {
     if (targetIds.length === 0 && room.players.length > 0) {
@@ -38,10 +39,12 @@ function Roulette({ socket, room, isHost, playerName, roomId }) {
   const spinRoulette = () => {
     const validPlayers = room.players.filter(p => targetIds.includes(p.id));
     if (validPlayers.length === 0) return alert('対象者を1人以上選んでください');
-    
+
     const randomPlayer = validPlayers[Math.floor(Math.random() * validPlayers.length)];
-    const randomTopic = topics[Math.floor(Math.random() * topics.length)];
-    
+    const chosenTopic = selectedTopic === 'ランダム' 
+      ? topics[Math.floor(Math.random() * topics.length)]
+      : selectedTopic;
+
     // Emit spinning state
     socket.emit('update_game_state', {
       roomId,
@@ -55,7 +58,7 @@ function Roulette({ socket, room, isHost, playerName, roomId }) {
       socket.emit('update_game_state', {
         roomId,
         payload: {
-          gameData: { phase: 'result', spinning: false, resultTopic: randomTopic, resultPlayer: randomPlayer }
+          gameData: { phase: 'result', spinning: false, resultTopic: chosenTopic, resultPlayer: randomPlayer }
         }
       });
     }, 3000);
@@ -69,7 +72,7 @@ function Roulette({ socket, room, isHost, playerName, roomId }) {
           <RouletteSetup socket={socket} room={room} roomId={roomId} forceOpen={true} />
         </div>
         {isHost ? (
-          <button 
+          <button
             className="btn btn-primary"
             onClick={() => socket.emit('update_game_state', { roomId, payload: { gameData: { ...gameData, phase: 'ready' } } })}
             style={{ width: '100%', maxWidth: '280px', borderRadius: '100px', fontWeight: 800, fontSize: '1.1rem', padding: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
@@ -88,8 +91,8 @@ function Roulette({ socket, room, isHost, playerName, roomId }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: '1rem' }}>
         <h2 style={{ color: 'var(--primary)', fontWeight: 900, margin: 0 }}>自己紹介ルーレット</h2>
         {isHost && !gameData.spinning && gameData.phase !== 'result' && (
-          <button 
-            className="btn btn-secondary" 
+          <button
+            className="btn btn-secondary"
             style={{ width: 'auto', padding: '0.25rem 0.75rem', fontSize: '0.75rem' }}
             onClick={() => socket.emit('update_game_state', { roomId, payload: { gameData: { ...gameData, phase: 'setup' } } })}
           >
@@ -97,28 +100,32 @@ function Roulette({ socket, room, isHost, playerName, roomId }) {
           </button>
         )}
       </div>
-      
-      {/* お題リスト公開エリア */}
-      <div style={{ marginBottom: '2.5rem', maxWidth: '100%', overflow: 'hidden' }}>
-        <p style={{ fontSize: '0.875rem', color: 'var(--gray-medium)', marginBottom: '0.75rem', textAlign: 'center' }}>ルーレット 후보 ({topics.length}件)</p>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', justifyContent: 'center' }}>
-          {topics.map((t, i) => (
-            <span key={i} style={{ 
-              backgroundColor: (gameData.phase === 'result' && gameData.resultTopic === t) ? 'var(--primary)' : 'var(--light)', 
-              color: (gameData.phase === 'result' && gameData.resultTopic === t) ? 'var(--white)' : 'var(--dark)',
-              padding: '0.3rem 0.6rem', borderRadius: '8px', fontSize: '0.8rem',
-              transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-              transform: (gameData.phase === 'result' && gameData.resultTopic === t) ? 'scale(1.1)' : 'scale(1)',
-              boxShadow: (gameData.phase === 'result' && gameData.resultTopic === t) ? '0 4px 12px rgba(255, 90, 95, 0.4)' : 'none'
-            }}>
-              {t}
-            </span>
-          ))}
-        </div>
+
+      {/* お題選択プルダウン */}
+      <div style={{ marginBottom: '2.5rem', width: '100%', maxWidth: '300px', margin: '0 auto 2.5rem auto' }}>
+        <p style={{ fontSize: '0.875rem', color: 'var(--gray-medium)', marginBottom: '0.5rem', textAlign: 'center', fontWeight: 'bold' }}>お題の選択</p>
+        {isHost ? (
+          <select 
+            className="input-field" 
+            value={selectedTopic} 
+            onChange={e => setSelectedTopic(e.target.value)}
+            disabled={gameData.spinning || gameData.phase === 'result'}
+            style={{ textAlign: 'center', fontSize: '0.9rem', fontWeight: 'bold', cursor: 'pointer' }}
+          >
+            <option value="ランダム">🎲 ランダムで決定</option>
+            {topics.map((t, i) => (
+              <option key={i} value={t}>{t}</option>
+            ))}
+          </select>
+        ) : (
+          <div style={{ backgroundColor: 'var(--light)', padding: '0.75rem', borderRadius: '8px', textAlign: 'center', fontWeight: 'bold', color: 'var(--dark)' }}>
+            {selectedTopic === 'ランダム' ? '🎲 ランダムで決定' : selectedTopic}
+          </div>
+        )}
       </div>
-      
+
       {/* ルーレット本体: Cute & Smooth Animation */}
-      <div 
+      <div
         style={{
           width: '220px',
           height: '220px',
@@ -153,7 +160,7 @@ function Roulette({ socket, room, isHost, playerName, roomId }) {
           <div className="animate-pop" style={{ textAlign: 'center' }}>
             <div style={{ color: 'var(--gray-medium)', fontSize: '0.875rem', marginBottom: '0.25rem' }}>お話するのは...</div>
             <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--primary)', marginBottom: '0.5rem' }}>
-              {gameData.resultPlayer?.name} <span style={{fontSize: '1rem'}}>さん</span>
+              {gameData.resultPlayer?.name} <span style={{ fontSize: '1rem' }}>さん</span>
             </div>
             <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--dark)', lineHeight: '1.4' }}>
               「{gameData.resultTopic}」
@@ -182,10 +189,10 @@ function Roulette({ socket, room, isHost, playerName, roomId }) {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 {room.players.map(p => (
                   <label key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.9rem' }}>
-                    <input 
-                      type="checkbox" 
-                      checked={targetIds.includes(p.id)} 
-                      onChange={() => toggleTarget(p.id)} 
+                    <input
+                      type="checkbox"
+                      checked={targetIds.includes(p.id)}
+                      onChange={() => toggleTarget(p.id)}
                       style={{ width: '1.2rem', height: '1.2rem' }}
                     />
                     {p.name}
@@ -194,8 +201,8 @@ function Roulette({ socket, room, isHost, playerName, roomId }) {
               </div>
             </div>
           )}
-          
-          <button 
+
+          <button
             className="btn btn-primary"
             onClick={spinRoulette}
             disabled={gameData.spinning || targetIds.length === 0}

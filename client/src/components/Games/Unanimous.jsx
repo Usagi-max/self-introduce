@@ -49,6 +49,8 @@ function Unanimous({ socket, room, isHost, playerName, roomId }) {
   const [answer, setAnswer] = useState('');
   const [mySubmission, setMySubmission] = useState(false);
   const [customPrompt, setCustomPrompt] = useState('');
+  const [selectedPreset, setSelectedPreset] = useState('');
+  const [inputType, setInputType] = useState('preset');
   const [selectedProfilePlayer, setSelectedProfilePlayer] = useState(null);
 
   const gameData = room.state.gameData || { question: '', answers: {}, phase: 'waiting', chooserIndex: 0, round: 1 };
@@ -185,40 +187,66 @@ function Unanimous({ socket, room, isHost, playerName, roomId }) {
     const isMyTurn = currentChooser && currentChooser.id === socket.id;
 
     if (isMyTurn) {
+      const activeTopic = inputType === 'preset' ? selectedPreset : customPrompt.trim();
+
       return (
         <div className="card animate-pop" style={{ padding: '2rem' }}>
-          <h2 style={{ color: 'var(--primary)', marginBottom: '1.5rem', textAlign: 'center' }}>
-            あなたがお題を決める番です！ <span style={{ fontSize: '1rem', color: 'var(--gray-medium)' }}>(ラウンド {gameData.round || 1})</span>
+          <h2 style={{ color: 'var(--primary)', marginBottom: '1.5rem', textAlign: 'center', lineHeight: '1.4' }}>
+            あなたがお題を決める番です！<br />
+            <span style={{ fontSize: '1.2rem', color: 'var(--gray-medium)' }}>(ラウンド {gameData.round || 1})</span>
           </h2>
-          <p style={{ marginBottom: '1rem', fontWeight: 'bold' }}>既存のリストから選ぶ:</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '2rem' }}>
-            {QUESTIONS.map((q, i) => (
-              <button key={i} className="btn btn-secondary" style={{ textAlign: 'left', backgroundColor: 'var(--white)', color: 'var(--gray-dark)' }} onClick={() => {
-                socket.emit('update_game_state', { roomId, payload: { gameData: { ...gameData, question: q, phase: 'input' } } });
-              }}>{q}</button>
-            ))}
+
+          <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', justifyContent: 'center' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontWeight: inputType === 'preset' ? 'bold' : 'normal', color: inputType === 'preset' ? 'var(--dark)' : 'var(--gray-medium)' }}>
+              <input type="radio" checked={inputType === 'preset'} onChange={() => setInputType('preset')} style={{ transform: 'scale(1.2)' }} />
+              リストから選ぶ
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontWeight: inputType === 'custom' ? 'bold' : 'normal', color: inputType === 'custom' ? 'var(--dark)' : 'var(--gray-medium)' }}>
+              <input type="radio" checked={inputType === 'custom'} onChange={() => setInputType('custom')} style={{ transform: 'scale(1.2)' }} />
+              自分で入力する
+            </label>
           </div>
 
-          <div style={{ padding: '1.5rem', backgroundColor: 'var(--light)', borderRadius: '8px' }}>
-            <p style={{ marginBottom: '0.5rem', fontWeight: 'bold' }}>自分で好きなお題を入力する:</p>
-            <input
-              className="input-field"
-              placeholder="例: 無人島に一つだけ持っていくなら？"
-              value={customPrompt}
-              onChange={e => setCustomPrompt(e.target.value)}
-            />
-            <button
-              className="btn btn-primary"
-              style={{ width: '100%' }}
-              disabled={!customPrompt.trim()}
-              onClick={() => {
-                socket.emit('update_game_state', { roomId, payload: { gameData: { ...gameData, question: customPrompt.trim(), phase: 'input' } } });
-                setCustomPrompt('');
-              }}
-            >
-              このお題でゲーム開始
-            </button>
+          <div style={{ backgroundColor: 'var(--light)', padding: '1.5rem', borderRadius: '8px', marginBottom: '2rem', minHeight: '120px' }}>
+            {inputType === 'preset' ? (
+              <div className="animate-pop">
+                <p style={{ marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--dark)' }}>既存のリストから選ぶ:</p>
+                <select
+                  className="input-field"
+                  value={selectedPreset}
+                  onChange={e => setSelectedPreset(e.target.value)}
+                  style={{ width: '100%', cursor: 'pointer' }}
+                >
+                  <option value="">-- お題を選択してください --</option>
+                  {QUESTIONS.map((q, i) => (
+                    <option key={i} value={q}>{q}</option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <div className="animate-pop">
+                <p style={{ marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--dark)' }}>自分で好きなお題を入力する:</p>
+                <input
+                  className="input-field"
+                  placeholder="例: 無人島に一つだけ持っていくなら？"
+                  value={customPrompt}
+                  onChange={e => setCustomPrompt(e.target.value)}
+                />
+              </div>
+            )}
           </div>
+
+          <button
+            className="btn btn-primary"
+            style={{ width: '100%' }}
+            disabled={!activeTopic}
+            onClick={() => {
+              socket.emit('update_game_state', { roomId, payload: { gameData: { ...gameData, question: activeTopic, phase: 'input' } } });
+              if (inputType === 'custom') setCustomPrompt('');
+            }}
+          >
+            このお題でゲーム開始
+          </button>
         </div>
       );
     } else {

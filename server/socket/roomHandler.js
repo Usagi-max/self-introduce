@@ -66,7 +66,7 @@ module.exports = {
         if (player.isHost) {
           hostReassignTimeouts[roomId] = setTimeout(() => {
             reassignHostIfNeeded(roomId);
-          }, 10000); // 10 seconds grace period before reassignment
+          }, 2000); // 2 seconds grace period before reassignment
         }
         
         checkEmptyRoom(roomId);

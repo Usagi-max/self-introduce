@@ -49,12 +49,27 @@ const TransferModal = ({ sourcePlayer, candidates, onTransfer, onClose }) => {
 
         <div style={{ display: 'flex', gap: '1rem' }}>
           <button className="btn btn-primary" disabled={!targetId} onClick={() => {
-            if(window.confirm('本当に引き継ぎを実行しますか？')) {
+            if (window.confirm('本当に引き継ぎを実行しますか？')) {
               onTransfer(sourcePlayer.sessionId, targetId, mode);
               onClose();
             }
           }}>実行する</button>
           <button className="btn btn-secondary" onClick={onClose}>キャンセル</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ConfirmModal = ({ isOpen, message, onConfirm, onCancel }) => {
+  if (!isOpen) return null;
+  return (
+    <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 10000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+      <div className="animate-pop" style={{ backgroundColor: 'white', padding: '2rem', borderRadius: '16px', maxWidth: '400px', width: '90%', textAlign: 'center', boxShadow: '0 10px 25px rgba(0,0,0,0.2)' }}>
+        <p style={{ fontSize: '1.1rem', fontWeight: 'bold', marginBottom: '1.5rem', color: 'var(--dark)', lineHeight: '1.5' }}>{message}</p>
+        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+          <button className="btn btn-primary" onClick={onConfirm} style={{ width: '120px' }}>はい</button>
+          <button className="btn btn-secondary" onClick={onCancel} style={{ width: '120px' }}>いいえ</button>
         </div>
       </div>
     </div>
@@ -68,6 +83,15 @@ function Room({ socket, room, isHost, playerName }) {
   const [copiedLink, setCopiedLink] = useState(false);
   const [selectedProfilePlayer, setSelectedProfilePlayer] = useState(null);
   const [transferSourcePlayer, setTransferSourcePlayer] = useState(null);
+  const [confirmConfig, setConfirmConfig] = useState({ isOpen: false, message: '', onConfirm: null });
+
+  const requestConfirm = (message, onConfirmCallback) => {
+    setConfirmConfig({ isOpen: true, message, onConfirm: onConfirmCallback });
+  };
+
+  const closeConfirm = () => {
+    setConfirmConfig({ isOpen: false, message: '', onConfirm: null });
+  };
 
   // If page refershed and context lost, return home
   useEffect(() => {
@@ -96,11 +120,12 @@ function Room({ socket, room, isHost, playerName }) {
   };
 
   const handleLeaveRoom = () => {
-    if (window.confirm('ルームから退出しますか？')) {
+    requestConfirm('ルームから退出しますか？', () => {
       socket.emit('leave_room', { roomId });
       sessionStorage.removeItem('savedRoomId');
       navigate('/');
-    }
+      closeConfirm();
+    });
   };
 
   const executeTransfer = (sourceSessionId, targetSessionId, mode) => {
@@ -255,9 +280,10 @@ function Room({ socket, room, isHost, playerName }) {
                           className="btn btn-secondary" 
                           style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', width: 'auto' }} 
                           onClick={() => {
-                            if (window.confirm(`${p.name}にホスト権限を譲りますか？`)) {
+                            requestConfirm(`${p.name}にホスト権限を譲りますか？`, () => {
                               socket.emit('transfer_host', { roomId, targetSessionId: p.sessionId });
-                            }
+                              closeConfirm();
+                            });
                           }}>
                           ホストにする
                         </button>
@@ -265,9 +291,10 @@ function Room({ socket, room, isHost, playerName }) {
                           className="btn btn-secondary" 
                           style={{ backgroundColor: '#FFebF0', color: '#E53E3E', border: 'none', padding: '0.25rem 0.5rem', fontSize: '0.75rem', width: 'auto' }} 
                           onClick={() => {
-                            if (window.confirm(`${p.name}を離脱させますか？`)) {
+                            requestConfirm(`${p.name}を離脱させますか？`, () => {
                               socket.emit('kick_player', { roomId, targetSessionId: p.sessionId });
-                            }
+                              closeConfirm();
+                            });
                           }}>
                           離脱させる
                         </button>
@@ -343,6 +370,13 @@ function Room({ socket, room, isHost, playerName }) {
             onClose={() => setTransferSourcePlayer(null)} 
           />
         )}
+
+        <ConfirmModal 
+          isOpen={confirmConfig.isOpen} 
+          message={confirmConfig.message} 
+          onConfirm={confirmConfig.onConfirm} 
+          onCancel={closeConfirm} 
+        />
       </div>
     );
   }
@@ -370,14 +404,28 @@ function Room({ socket, room, isHost, playerName }) {
       )}
       
       {isHost && (
-        <button 
-          className="btn btn-secondary"
-          style={{ position: 'absolute', top: '-60px', right: '0', width: 'auto', padding: '0.5rem 1rem', fontSize: '0.875rem' }}
-          onClick={handleReturnToLobby}
-        >
-          やめる
-        </button>
+        <div style={{ marginTop: '2rem', textAlign: 'center' }}>
+          <button 
+            className="btn btn-secondary"
+            style={{ width: 'auto', padding: '0.75rem 2rem', fontWeight: 600, borderRadius: '100px', backgroundColor: '#f8f9fa', border: '1px solid var(--gray-light)', color: 'var(--gray-dark)' }}
+            onClick={() => {
+              requestConfirm('ゲームを途中終了してロビーに戻りますか？', () => {
+                handleReturnToLobby();
+                closeConfirm();
+              });
+            }}
+          >
+            ゲームを終了してロビーに戻る
+          </button>
+        </div>
       )}
+
+      <ConfirmModal 
+        isOpen={confirmConfig.isOpen} 
+        message={confirmConfig.message} 
+        onConfirm={confirmConfig.onConfirm} 
+        onCancel={closeConfirm} 
+      />
     </div>
   );
 }
