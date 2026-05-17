@@ -1,10 +1,14 @@
 import { useState, useEffect } from 'react'
-import { Routes, Route, useNavigate } from 'react-router-dom'
+import { Routes, Route, useNavigate, Link } from 'react-router-dom'
 import { io } from 'socket.io-client'
 
 import Home from './components/Home'
 import Room from './components/Room'
 import BannerAd from './components/BannerAd'
+import PrivacyPolicy from './components/PrivacyPolicy'
+import HowToPlay from './components/HowToPlay'
+import Scenes from './components/Scenes'
+import MachiconLanding from './components/MachiconLanding'
 
 // Use environment variable for backend URL in production, fallback to localhost for development
 const SOCKET_SERVER_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001').replace(/\/$/, "");
@@ -174,10 +178,18 @@ function App() {
             } 
           />
           <Route path="/register" element={<Register />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/how-to-play" element={<HowToPlay />} />
+          <Route path="/scenes" element={<Scenes />} />
+          <Route path="/machicon" element={<MachiconLanding />} />
         </Routes>
       </main>
-      <BannerAd />
       <footer style={{ textAlign: 'center', padding: '1.5rem 1rem', fontSize: '0.8rem', color: 'var(--gray-medium)', borderTop: '1px solid var(--gray-light)', backgroundColor: 'var(--light)', marginTop: 'auto' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '1.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+          <Link to="/how-to-play" style={{ color: 'var(--gray-dark)', textDecoration: 'none' }}>遊び方・使い方</Link>
+          <Link to="/scenes" style={{ color: 'var(--gray-dark)', textDecoration: 'none' }}>シーン別おすすめ</Link>
+          <Link to="/privacy" style={{ color: 'var(--gray-dark)', textDecoration: 'none' }}>プライバシーポリシー</Link>
+        </div>
         &copy; {new Date().getFullYear()} アイブレ -AI ice Break- All rights reserved.
       </footer>
     </>
